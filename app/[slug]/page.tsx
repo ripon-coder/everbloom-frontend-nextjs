@@ -4,7 +4,7 @@ import productImg from "@/public/headphone.jpeg";
 export default function ProductPage() {
   return (
     <div className="bg-gray-100 min-h-screen p-4">
-      <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="w-full mx-auto bg-white p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* === Left Side: Product Images === */}
         <div>
           {/* Main Image */}
