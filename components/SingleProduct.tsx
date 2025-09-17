@@ -1,13 +1,25 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
+import { FaHeart, FaRegHeart } from "react-icons/fa"; // ❤️ icons
 import productImg from "@/public/headphone.jpeg";
 
 export default function ProductPage() {
+  const [selectedColor, setSelectedColor] = useState("Black");
+  const [selectedType, setSelectedType] = useState("Wireless");
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  // ✅ Mock product data
+  const stock = 12;
+  const deliveryDays = [2, 4];
+
   return (
-    <div className="bg-gray-100 p-2 bg-white">
-      <div className="w-full mx-auto  p-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="p-2 bg-white">
+      <div className="w-full mx-auto p-3 grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* === Left Side: Product Images === */}
         <div>
-          {/* Main Image */}
+          {/* Main Image with Favorite Button */}
           <div className="relative w-full h-80 sm:h-96 border rounded-lg overflow-hidden">
             <Image
               src={productImg}
@@ -15,6 +27,17 @@ export default function ProductPage() {
               fill
               className="object-cover"
             />
+            {/* Favorite Button */}
+            <button
+              onClick={() => setIsFavorite(!isFavorite)}
+              className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-md hover:scale-110 transition"
+            >
+              {isFavorite ? (
+                <FaHeart className="text-red-500 text-xl" />
+              ) : (
+                <FaRegHeart className="text-gray-600 text-xl" />
+              )}
+            </button>
           </div>
 
           {/* Thumbnails */}
@@ -53,13 +76,62 @@ export default function ProductPage() {
           {/* Price */}
           <div className="text-3xl font-bold text-orange-600">৳ 1,250</div>
 
+          {/* Attributes */}
+          <div className="mt-2 space-y-3">
+            {/* Color */}
+            <div>
+              <span className="font-medium text-sm">Color:</span>
+              <div className="flex gap-3 mt-2">
+                {["Black", "White", "Red"].map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setSelectedColor(color)}
+                    className={`px-4 py-2 border rounded-md text-sm ${
+                      selectedColor === color
+                        ? "border-orange-500 bg-orange-50 text-orange-600"
+                        : "hover:bg-gray-100"
+                    }`}
+                  >
+                    {color}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Type */}
+            <div>
+              <span className="font-medium text-sm">Type:</span>
+              <div className="flex gap-3 mt-2">
+                {["Wireless", "Wired"].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedType(type)}
+                    className={`px-4 py-2 border rounded-md text-sm ${
+                      selectedType === type
+                        ? "border-orange-500 bg-orange-50 text-orange-600"
+                        : "hover:bg-gray-100"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Stock & Delivery Info */}
-          <div className="text-sm text-gray-700">
+          <div className="text-sm text-gray-700 space-y-1">
             <p>
-              <span className="font-medium">Stock:</span> In Stock
+              <span className="font-medium">Stock:</span>{" "}
+              {stock > 0 ? (
+                <span className="text-green-600">{stock} available</span>
+              ) : (
+                <span className="text-red-500">Out of stock</span>
+              )}
             </p>
             <p>
-              <span className="font-medium">Delivery:</span> Within 2-4 days
+              <span className="font-medium">Delivery:</span>{" "}
+              {`Within ${deliveryDays[0]}-${deliveryDays[1]} days`}
             </p>
           </div>
 
@@ -81,18 +153,6 @@ export default function ProductPage() {
             <button className="flex-1 border border-orange-500 text-orange-500 py-3 rounded-lg font-medium hover:bg-orange-50 transition">
               Buy Now
             </button>
-          </div>
-
-          {/* Product Description */}
-          <div className="mt-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">
-              Product Details
-            </h2>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              This wireless Bluetooth headphone delivers crystal clear sound with
-              deep bass, up to 20 hours battery backup, and comfortable ear cups.
-              Perfect for gaming, music, and calls.
-            </p>
           </div>
         </div>
       </div>

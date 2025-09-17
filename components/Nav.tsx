@@ -62,7 +62,7 @@ export default function Navbar() {
             My Account
           </Link>
           <Link
-            href="https://example.com/orders"
+            href="/my-orders"
             className="cursor-pointer text-gray-600 hover:text-amber-500 transition-colors"
           >
             Orders
@@ -73,8 +73,9 @@ export default function Navbar() {
       {/* Middle bar */}
       <div className="flex items-center justify-between px-4 py-4">
         {/* Logo */}
-        <div className="text-2xl font-bold text-amber-500">E-Shop</div>
-
+        <Link href="/">
+          <div className="text-2xl font-bold text-amber-500">E-Shop</div>
+        </Link>
         {/* Desktop search bar */}
         <div className="hidden md:flex flex-1 max-w-3xl mx-auto">
           <div className="flex w-full">
@@ -100,19 +101,19 @@ export default function Navbar() {
           </div>
 
           <Link
-            href="#"
+            href="/profile"
             className="text-gray-700 hover:text-amber-500 transition-colors text-xl"
           >
             <FiUser />
           </Link>
           <Link
-            href="#"
+            href="/my-wishlist"
             className="text-gray-700 hover:text-amber-500 transition-colors text-xl"
           >
             <FiHeart />
           </Link>
           <Link
-            href="#"
+            href="/cart"
             className="relative text-gray-700 hover:text-amber-500 transition-colors text-xl"
           >
             <FiShoppingCart />

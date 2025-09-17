@@ -1,5 +1,4 @@
-"use client";
-
+import NewsLetter from "./NewsLetter";
 import { FiFacebook, FiInstagram, FiTwitter, FiYoutube } from "react-icons/fi";
 
 export default function Footer() {
@@ -54,22 +53,7 @@ export default function Footer() {
         </div>
 
         {/* Newsletter */}
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-4">Newsletter</h3>
-          <p className="text-gray-400 text-sm mb-4">
-            Subscribe to get latest updates and offers.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-0">
-            <input
-              type="email"
-              placeholder="Your email"
-              className="flex-1 px-4 py-2 rounded-l-lg focus:outline-none text-white w-full border border-amber-500"
-            />
-            <button className="bg-amber-600 hover:bg-amber-700 px-4 py-2 rounded-r-lg text-white font-medium w-full sm:w-auto cursor-pointer">
-              Subscribe
-            </button>
-          </div>
-        </div>
+        <NewsLetter></NewsLetter>
       </div>
 
       <div className="border-t border-gray-700 mt-8 pt-4 text-center text-gray-500 text-sm">
