@@ -1,119 +1,97 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProductGrid from "@/components/ProductGrid"; // Your product component
+import CategoryShop from "@/components/CategoryShop"; // New CategoryShop component
+import BrandShop from "@/components/BrandShop"; // New BrandShop component
+import { Product } from "@/components/ProductGrid"; // Import Product interface
 
 export default function ShopPage() {
-  // Categories with nested children
-  const categories = [
-    {
-      id: 1,
-      name: "Electronics",
-      children: [
-        {
-          id: 11,
-          name: "Mobile Phones",
-          children: [
-            { id: 111, name: "Android" },
-            { id: 112, name: "iOS" },
-          ],
-        },
-        {
-          id: 12,
-          name: "Laptops",
-          children: [
-            { id: 121, name: "Gaming Laptops" },
-            { id: 122, name: "Ultrabooks" },
-          ],
-        },
-        { id: 13, name: "Tablets" },
-      ],
-    },
-    {
-      id: 2,
-      name: "Home Appliances",
-      children: [
-        {
-          id: 21,
-          name: "Refrigerators",
-          children: [
-            { id: 211, name: "Single Door" },
-            { id: 212, name: "Double Door" },
-          ],
-        },
-        {
-          id: 22,
-          name: "Washing Machines",
-          children: [
-            { id: 221, name: "Front Load" },
-            { id: 222, name: "Top Load" },
-          ],
-        },
-      ],
-    },
-    {
-      id: 3,
-      name: "Fashion",
-      children: [
-        {
-          id: 31,
-          name: "Men's Clothing",
-          children: [
-            { id: 311, name: "T-Shirts" },
-            { id: 312, name: "Jeans" },
-          ],
-        },
-        {
-          id: 32,
-          name: "Women's Clothing",
-          children: [
-            { id: 321, name: "Dresses" },
-            { id: 322, name: "Tops" },
-          ],
-        },
-      ],
-    },
-  ];
+  const [products, setProducts] = useState<Product[]>([]); // Stores all fetched products
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true); // For initial load
+  const [isFetchingNextPage, setIsFetchingNextPage] = useState(false); // For load more action
+  const [currentPage, setCurrentPage] = useState(1); // API page
+  const [totalPages, setTotalPages] = useState(0);
 
-  // Brands
-  const brands = [
-    { id: 1, name: "Apple" },
-    { id: 2, name: "Samsung" },
-    { id: 3, name: "Sony" },
-    { id: 4, name: "LG" },
-    { id: 5, name: "Nike" },
-    { id: 6, name: "Adidas" },
-  ];
-
-  // Filter states
+  // Filter states for UI only (not used for filtering products)
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [maxPrice, setMaxPrice] = useState<number>(2000);
   const [expandedCategories, setExpandedCategories] = useState<number[]>([]);
 
-  // Toggle expand/collapse categories
+  // Fetch products
+  const fetchProducts = async (page = 1, append = false) => {
+    // For initial load, setIsLoadingProducts is true.
+    // For load-more, setIsFetchingNextPage is true.
+    if (page === 1) {
+      setIsLoadingProducts(true);
+    } else {
+      setIsFetchingNextPage(true);
+    }
+    
+    try {
+      // Call the local API route.
+      // We specify per_page as 8 to control how many products are fetched per API call.
+      const params = new URLSearchParams({
+        current_page: page.toString(),
+        per_page: "8", // Fetch 8 products per page from the API
+      });
+      const response = await fetch(`/api/products?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const responseData = await response.json();
+      const newProducts: Product[] = responseData.data.products;
+      const pagination = responseData.data.pagination;
+
+      if (append) {
+        const existingIds = new Set(products.map(p => p.id));
+        const uniqueNewProducts = newProducts.filter(p => !existingIds.has(p.id));
+        setProducts((prevProducts) => [...prevProducts, ...uniqueNewProducts]);
+      } else {
+        setProducts(newProducts);
+      }
+      
+      setCurrentPage(Number(pagination.current_page));
+      setTotalPages(Number(pagination.last_page));
+
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+      setProducts([]);
+    } finally {
+      setIsLoadingProducts(false);
+      setIsFetchingNextPage(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const handleLoadMore = () => {
+    // If there is a next page on the API, fetch more.
+    if (currentPage < totalPages) {
+      fetchProducts(currentPage + 1, true);
+    }
+  };
+
+  // Toggle expand/collapse categories for UI
   const toggleCategory = (id: number) => {
     setExpandedCategories((prev) =>
       prev.includes(id) ? prev.filter((cid) => cid !== id) : [...prev, id]
     );
   };
 
-  // Reset filters
+  // Reset filters for UI
   const resetFilters = () => {
     setSelectedColor(null);
     setSelectedType(null);
     setSelectedBrand(null);
     setMaxPrice(2000);
     setExpandedCategories([]);
-  };
-
-  // Filters object to pass to product grid
-  const filters = {
-    color: selectedColor,
-    type: selectedType,
-    brand: selectedBrand,
-    maxPrice,
+    // Refetch products from page 1 when filters are reset
+    fetchProducts(1, false);
   };
 
   return (
@@ -167,42 +145,16 @@ export default function ShopPage() {
             </div>
           </div>
 
-{/* Categories Filter */}
-<div>
-  <h3 className="font-medium mb-2">Categories</h3>
-  <div className="space-y-1 text-sm text-gray-700">
-    {categories.map((cat) => (
-      <CategoryItem
-        key={cat.id}
-        category={cat}
-        expandedCategories={expandedCategories}
-        toggleCategory={toggleCategory}
-        level={0} // top level
-      />
-    ))}
-  </div>
-</div>
+          {/* Categories Filter */}
+          <div>
+            <h3 className="font-medium mb-2">Categories</h3>
+            <CategoryShop />
+          </div>
 
           {/* Brands Filter */}
           <div>
             <h3 className="font-medium mb-2">Brands</h3>
-            <div className="flex gap-2 flex-wrap">
-              {brands.map((brand) => (
-                <button
-                  key={brand.id}
-                  onClick={() =>
-                    setSelectedBrand(selectedBrand === brand.name ? null : brand.name)
-                  }
-                  className={`px-3 py-1 border rounded-md text-sm ${
-                    selectedBrand === brand.name
-                      ? "bg-orange-50 border-orange-500 text-orange-600"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  {brand.name}
-                </button>
-              ))}
-            </div>
+            <BrandShop />
           </div>
 
           {/* Price Filter */}
@@ -230,52 +182,29 @@ export default function ShopPage() {
 
         {/* Products */}
         <div className="md:col-span-3">
-          <ProductGrid filters={filters} />
+          <>
+            <ProductGrid products={products} isLoading={isLoadingProducts && products.length === 0} />
+            {/* Show Load More if there are more pages to fetch from the API */}
+            {currentPage < totalPages && (
+              <div className="flex justify-center mt-6 ">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={isFetchingNextPage}
+                  className="px-6 py-2 bg-orange-500 text-white font-medium rounded-md hover:bg-orange-600 disabled:bg-orange-300 transition flex items-center justify-center"
+                >
+                  {isFetchingNextPage && (
+                    <svg className="animate-spin mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {isFetchingNextPage ? "Loading..." : "Load More"}
+                </button>
+              </div>
+            )}
+          </>
         </div>
       </div>
-    </div>
-  );
-}
-
-{/* Recursive CategoryItem */}
-function CategoryItem({ category, expandedCategories, toggleCategory, level }: any) {
-  const hasChildren = category.children && category.children.length > 0;
-  const isExpanded = expandedCategories.includes(category.id);
-
-  return (
-    <div className={`ml-${level * 4}`}>
-      <div
-        className="flex justify-between items-center cursor-pointer hover:text-orange-500 transition-colors py-1"
-        onClick={() => hasChildren && toggleCategory(category.id)}
-      >
-        <span>{category.name}</span>
-        {hasChildren && (
-          <svg
-            className={`w-4 h-4 transform transition-transform ${
-              isExpanded ? "rotate-90" : "rotate-0"
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        )}
-      </div>
-
-      {isExpanded && hasChildren && (
-        <div className="mt-1 space-y-1">
-          {category.children.map((child: any) => (
-            <CategoryItem
-              key={child.id}
-              category={child}
-              expandedCategories={expandedCategories}
-              toggleCategory={toggleCategory}
-              level={level + 1}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
