@@ -47,12 +47,11 @@ export default function ShopPage() {
   const [attributes, setAttributes] = useState<Attribute[]>([]); // For future use
   const [isLoadingFilters, setIsLoadingFilters] = useState(true);
 
-  // Filter states for UI only (not used for filtering products)
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  // Filter states
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null); // Will store brand.id as string
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [maxPrice, setMaxPrice] = useState<number>(2000);
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string | null>>({}); // e.g., { color: 'Red', size: 'L' }
   const [expandedCategories, setExpandedCategories] = useState<number[]>([]); // This seems to be for CategoryShop's internal UI, can be removed from here if CategoryShop manages it fully.
 
   // Fetch products
@@ -67,11 +66,32 @@ export default function ShopPage() {
     
     try {
       // Call the local API route.
-      // We specify per_page as 8 to control how many products are fetched per API call.
       const params = new URLSearchParams({
         current_page: page.toString(),
         per_page: "8", // Fetch 8 products per page from the API
       });
+
+      // Append filter parameters if they are set
+      if (selectedBrand) {
+        params.append('brand_id', selectedBrand); // Assuming API expects brand_id
+      }
+      if (selectedCategoryId) {
+        params.append('category_id', selectedCategoryId.toString());
+      }
+      
+      // Append selected attributes
+      Object.entries(selectedAttributes).forEach(([key, value]) => {
+        if (value) {
+          // Use the attribute name (key) as the parameter name
+          params.append(key.toLowerCase(), value);
+        }
+      });
+
+      // Ensure maxPrice is a number before appending
+      if (typeof maxPrice === 'number' && maxPrice < 2000) { // Only send if not default
+         params.append('max_price', maxPrice.toString());
+      }
+
       const response = await fetch(`/api/products?${params.toString()}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -100,10 +120,10 @@ export default function ShopPage() {
     }
   };
 
-  // Fetch products
+  // Fetch products on initial load and when filters change
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    fetchProducts(1, false); // Always fetch from page 1 when filters change
+  }, [selectedBrand, selectedCategoryId, selectedAttributes, maxPrice, JSON.stringify(selectedAttributes)]);
 
   // Helper function to build a category hierarchy from a flat list
   const buildCategoryHierarchy = (flatCategories: Category[]): Category[] => {
@@ -138,9 +158,7 @@ export default function ShopPage() {
       setIsLoadingFilters(true);
       try {
         const params = new URLSearchParams();
-        if (selectedCategoryId) {
-          params.append('category_id', selectedCategoryId.toString());
-        }
+        // Note: category_id is no longer sent to the shop-filter API
         const response = await fetch(`/api/shop-filter?${params.toString()}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -151,7 +169,7 @@ export default function ShopPage() {
         const flatCategories = data.categories || [];
         
         // Check if the API response is already hierarchical (all items have parent_id: null)
-        const isAlreadyHierarchical = flatCategories.length > 0 && flatCategories.every(cat => cat.parent_id === null);
+        const isAlreadyHierarchical = flatCategories.length > 0 && flatCategories.every((cat: Category) => cat.parent_id === null);
         
         let hierarchicalCategories;
         if (isAlreadyHierarchical) {
@@ -172,7 +190,7 @@ export default function ShopPage() {
     };
 
     fetchFilters();
-  }, [selectedCategoryId]); // Rerun fetchFilters when selectedCategoryId changes
+  }, []); // Fetch filters only once on initial load
 
   const handleLoadMore = () => {
     // If there is a next page on the API, fetch more.
@@ -190,10 +208,15 @@ export default function ShopPage() {
     // fetchProducts(1, false, { categoryId });
   };
 
+  // Handle brand selection from BrandShop component
+  const handleBrandSelect = (brandId: string) => {
+    setSelectedBrand(prevBrandId => prevBrandId === brandId ? null : brandId); // Toggle selection
+    console.log("Selected Brand ID:", brandId);
+  };
+
   // Reset filters for UI
   const resetFilters = () => {
-    setSelectedColor(null);
-    setSelectedType(null);
+    setSelectedAttributes({});
     setSelectedBrand(null);
     setSelectedCategoryId(null);
     setMaxPrice(2000);
@@ -218,17 +241,14 @@ export default function ShopPage() {
                   <button
                     key={value.id}
                     onClick={() => {
-                      // Basic selection logic, can be expanded
-                      if (attribute.name.toLowerCase() === 'color') {
-                        setSelectedColor(selectedColor === value.value ? null : value.value);
-                      }
-                      if (attribute.name.toLowerCase() === 'size') { // Example for Size
-                        // setSelectedSize(prev => prev === value.value ? null : value.value);
-                      }
-                      // Add more conditions for other attributes if needed
+                      const attributeName = attribute.name.toLowerCase();
+                      setSelectedAttributes(prev => ({
+                        ...prev,
+                        [attributeName]: prev[attributeName] === value.value ? null : value.value,
+                      }));
                     }}
                     className={`px-3 py-1 border rounded-md text-sm ${
-                      (attribute.name.toLowerCase() === 'color' && selectedColor === value.value) // Example condition
+                      selectedAttributes[attribute.name.toLowerCase()] === value.value
                         ? "bg-orange-50 border-orange-500 text-orange-600"
                         : "hover:bg-gray-100"
                     }`}
@@ -246,7 +266,7 @@ export default function ShopPage() {
             {isLoadingFilters ? (
               <p>Loading categories...</p> // Or use a skeleton component
             ) : (
-              <CategoryShop categories={categories} onCategorySelect={handleCategorySelect} />
+              <CategoryShop categories={categories} onCategorySelect={handleCategorySelect} selectedCategoryId={selectedCategoryId} />
             )}
           </div>
 
@@ -256,7 +276,7 @@ export default function ShopPage() {
             {isLoadingFilters ? (
               <p>Loading brands...</p> // Or use a skeleton component
             ) : (
-              <BrandShop brands={brands} />
+              <BrandShop brands={brands} selectedBrand={selectedBrand} onBrandSelect={handleBrandSelect} />
             )}
           </div>
 

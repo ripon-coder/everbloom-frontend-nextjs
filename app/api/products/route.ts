@@ -6,11 +6,14 @@ export async function GET(request: Request) {
   
   // Extract pagination parameters from the request
   const currentPage = searchParams.get("current_page") || "1";
-  // Note: The client-side logic shows 5 at a time, but fetches in larger batches.
-  // The per_page here is what the external API expects per request.
-  // We will let the client decide how many to fetch per API call.
-  // For now, we just forward it.
   const perPage = searchParams.get("per_page"); 
+
+  // Extract filter parameters from the request
+  const brandId = searchParams.get("brand_id");
+  const categoryId = searchParams.get("category_id");
+  const color = searchParams.get("color");
+  const type = searchParams.get("type");
+  const maxPrice = searchParams.get("max_price");
 
   try {
     const apiUrl = new URL(`${API_BASE_URL}/shop-products`);
@@ -19,6 +22,23 @@ export async function GET(request: Request) {
     apiUrl.searchParams.append("current_page", currentPage);
     if (perPage) {
       apiUrl.searchParams.append("per_page", perPage);
+    }
+
+    // Forward filter parameters to the external API if they exist
+    if (brandId) {
+      apiUrl.searchParams.append("brand_id", brandId);
+    }
+    if (categoryId) {
+      apiUrl.searchParams.append("category_id", categoryId);
+    }
+    if (color) {
+      apiUrl.searchParams.append("color", color);
+    }
+    if (type) {
+      apiUrl.searchParams.append("type", type);
+    }
+    if (maxPrice) {
+      apiUrl.searchParams.append("max_price", maxPrice);
     }
 
     const response = await fetch(apiUrl.toString());

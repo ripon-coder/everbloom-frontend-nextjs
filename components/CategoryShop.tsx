@@ -15,6 +15,7 @@ interface Category {
 interface CategoryShopProps {
   categories: Category[];
   onCategorySelect: (categoryId: number) => void;
+  selectedCategoryId: number | null;
 }
 
 // Recursive CategoryItem component
@@ -24,15 +25,18 @@ function CategoryItem({
   expandedIds,
   onCategorySelect,
   onToggleExpand,
+  selectedCategoryId,
 }: {
   category: Category;
   level: number;
   expandedIds: number[];
   onCategorySelect: (categoryId: number) => void;
   onToggleExpand: (categoryId: number) => void;
+  selectedCategoryId: number | null;
 }) {
   const isExpanded = expandedIds.includes(category.id);
   const hasChildren = category.children && category.children.length > 0;
+  const isSelected = selectedCategoryId === category.id;
 
   const handleRowClick = () => {
     onCategorySelect(category.id);
@@ -43,7 +47,7 @@ function CategoryItem({
       {/* Category Row */}
       <div
         className={`flex items-center py-1.5 px-2 rounded-md cursor-pointer group hover:bg-gray-100 transition-colors duration-150 ${
-          isExpanded ? 'bg-blue-50' : ''
+          isSelected ? 'bg-orange-100  border-orange-500' : isExpanded ? 'bg-blue-50' : ''
         }`}
         onClick={handleRowClick}
         style={{ paddingLeft: `${level * 20 + 8}px` }} // Indentation based on level
@@ -97,7 +101,9 @@ function CategoryItem({
         </div>
 
         {/* Category Name */}
-        <span className={`text-sm font-medium truncate ${isExpanded ? 'text-blue-700' : 'text-gray-700'}`}>
+        <span className={`text-sm font-medium truncate ${
+          isSelected ? 'text-orange-600 font-semibold' : isExpanded ?? 'text-gray-700'
+        }`}>
           {category.name}
         </span>
       </div>
@@ -105,7 +111,7 @@ function CategoryItem({
       {/* Children Container */}
       {isExpanded && hasChildren && (
         <div>
-          {category.children.map((child) => (
+        {category.children.map((child) => (
             <CategoryItem
               key={child.id}
               category={child}
@@ -113,6 +119,7 @@ function CategoryItem({
               expandedIds={expandedIds}
               onCategorySelect={onCategorySelect}
               onToggleExpand={onToggleExpand}
+              selectedCategoryId={selectedCategoryId}
             />
           ))}
         </div>
@@ -122,7 +129,7 @@ function CategoryItem({
 }
 
 
-export default function CategoryShop({ categories, onCategorySelect }: CategoryShopProps) {
+export default function CategoryShop({ categories, onCategorySelect, selectedCategoryId }: CategoryShopProps) {
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
 
   const handleToggleExpand = (categoryId: number) => {
@@ -156,6 +163,7 @@ export default function CategoryShop({ categories, onCategorySelect }: CategoryS
           expandedIds={expandedIds}
           onCategorySelect={onCategorySelect}
           onToggleExpand={handleToggleExpand}
+          selectedCategoryId={selectedCategoryId}
         />
       ))}
     </div>
