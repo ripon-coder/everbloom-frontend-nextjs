@@ -20,6 +20,21 @@ interface CategoryShopProps {
 export default function CategoryShop({ categories, onCategorySelect }: CategoryShopProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
+  // Effect to ensure the single parent is always expanded if it's the only one.
+  // This runs on every render to check the condition dynamically.
+  const topLevelParentsWithChildren = categories.filter(cat => cat.parent_id === null && cat.children && cat.children.length > 0);
+  if (topLevelParentsWithChildren.length === 1) {
+    const singleParentId = topLevelParentsWithChildren[0].id;
+    // If the single parent is not the one currently expanded, expand it.
+    if (expandedId !== singleParentId) {
+      // We use a functional update to avoid dependency issues and ensure it's set correctly.
+      setExpandedId(currentId => currentId === singleParentId ? currentId : singleParentId);
+    }
+  } else if (topLevelParentsWithChildren.length > 1 && expandedId !== null && !categories.some(cat => cat.id === expandedId)) {
+    // If there are multiple parents and the expandedId is no longer in the list (e.g., after filtering), collapse it.
+    setExpandedId(null);
+  }
+
   const handleCategoryNameClick = (categoryId: number, hasChildren: boolean) => {
     onCategorySelect(categoryId);
     // When a category name is clicked, it should also expand if it has children and is not already expanded.
