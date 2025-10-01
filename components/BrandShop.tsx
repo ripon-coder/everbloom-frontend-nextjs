@@ -1,42 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { API_BASE_URL } from "@/lib/config";
+// Define the type for a Brand object
+interface Brand {
+  id: number;
+  name: string;
+}
 
-export default function BrandShop() {
-  const [brands, setBrands] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface BrandShopProps {
+  brands: Brand[];
+}
 
-  // Fetch brands from API
-  useEffect(() => {
-    const fetchBrands = async () => {
-      setIsLoading(true); // Start loading
-      try {
-        const response = await fetch(`${API_BASE_URL}/all-brands`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setBrands(data);
-      } catch (error) {
-        console.error("Failed to fetch brands:", error);
-        // Optionally, set an error state or show a message to the user
-      } finally {
-        setIsLoading(false); // Stop loading, regardless of success or error
-      }
-    };
-
-    fetchBrands();
-  }, []); // Empty dependency array means this effect runs once on mount
-
-  if (isLoading) {
-    return (
-      <div className="flex gap-2 flex-wrap">
-        <p>Loading brands...</p>
-        {/* You can replace this with a spinner component if you have one */}
-      </div>
-    );
-  }
+export default function BrandShop({ brands }: BrandShopProps) {
+  // Loading state is now handled by the parent component (ShopPage)
+  // No internal data fetching needed
 
   return (
     <div className="flex gap-2 flex-wrap">
