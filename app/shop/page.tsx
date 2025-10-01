@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import ProductGrid from "@/components/ProductGrid"; // Your product component
 import CategoryShop from "@/components/CategoryShop"; // New CategoryShop component
 import BrandShop from "@/components/BrandShop"; // New BrandShop component
@@ -35,6 +36,9 @@ interface Attribute {
 }
 
 export default function ShopPage() {
+  const searchParams = useSearchParams();
+  const categorySlug = searchParams.get('category');
+  
   const [products, setProducts] = useState<Product[]>([]); // Stores all fetched products
   const [isLoadingProducts, setIsLoadingProducts] = useState(true); // For initial load
   const [isFetchingNextPage, setIsFetchingNextPage] = useState(false); // For load more action
@@ -158,15 +162,25 @@ export default function ShopPage() {
       setIsLoadingFilters(true);
       try {
         const params = new URLSearchParams();
-        // Note: category_id is no longer sent to the shop-filter API
+        // Pass category slug to filter API if present in URL
+        if (categorySlug) {
+          params.append('category', categorySlug);
+        }
+        
         const response = await fetch(`/api/shop-filter?${params.toString()}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        setBrands(data.brands || []);
+        
+        // Handle the raw API response structure
+        // The response might be { status: true, data: { brands: [...], categories: [...], attributes: [...] } }
+        // or it might be directly { brands: [...], categories: [...], attributes: [...] }
+        const apiData = data.data || data; // Handle both response structures
+        
+        setBrands(apiData.brands || []);
         // Transform the flat categories list into a hierarchy
-        const flatCategories = data.categories || [];
+        const flatCategories = apiData.categories || [];
         
         // Check if the API response is already hierarchical (all items have parent_id: null)
         const isAlreadyHierarchical = flatCategories.length > 0 && flatCategories.every((cat: Category) => cat.parent_id === null);
@@ -181,7 +195,15 @@ export default function ShopPage() {
         }
         
         setCategories(hierarchicalCategories);
-        setAttributes(data.attributes || []); // Store attributes if needed later
+        setAttributes(apiData.attributes || []); // Store attributes if needed later
+        
+        // If category slug is present in URL, find and set the selected category
+        if (categorySlug && flatCategories.length > 0) {
+          const categoryFromSlug = flatCategories.find((cat: Category) => cat.slug === categorySlug);
+          if (categoryFromSlug) {
+            setSelectedCategoryId(categoryFromSlug.id);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch filters:", error);
       } finally {
@@ -190,7 +212,7 @@ export default function ShopPage() {
     };
 
     fetchFilters();
-  }, []); // Fetch filters only once on initial load
+  }, [categorySlug]); // Fetch filters when categorySlug changes
 
   const handleLoadMore = () => {
     // If there is a next page on the API, fetch more.

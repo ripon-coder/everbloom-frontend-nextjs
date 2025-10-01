@@ -46,8 +46,8 @@ function CategoryItem({
     <div className="select-none">
       {/* Category Row */}
       <div
-        className={`flex items-center py-1.5 px-2 rounded-md cursor-pointer group hover:bg-gray-100 transition-colors duration-150 ${
-          isSelected ? 'bg-orange-100  border-orange-500' : isExpanded ? 'bg-blue-50' : ''
+        className={`flex items-center py-1.5 px-2 rounded-md cursor-pointer hover:bg-amber-50 ${
+          isSelected ? 'bg-amber-200' : ''
         }`}
         onClick={handleRowClick}
         style={{ paddingLeft: `${level * 20 + 8}px` }} // Indentation based on level
@@ -59,7 +59,7 @@ function CategoryItem({
               e.stopPropagation();
               onToggleExpand(category.id);
             }}
-            className="mr-1 flex-shrink-0 p-1 rounded hover:bg-gray-200 transition-colors"
+            className="mr-1 flex-shrink-0 p-1 rounded hover:bg-gray-200"
           >
             <svg
               className={`w-4 h-4 text-gray-600 transform transition-transform duration-200 ${
@@ -102,7 +102,7 @@ function CategoryItem({
 
         {/* Category Name */}
         <span className={`text-sm font-medium truncate ${
-          isSelected ? 'text-orange-600 font-semibold' : isExpanded ?? 'text-gray-700'
+          isSelected ? 'text-gray-900 font-semibold' : isExpanded ? 'text-gray-700' : 'text-gray-700'
         }`}>
           {category.name}
         </span>
