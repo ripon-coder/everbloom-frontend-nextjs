@@ -79,7 +79,7 @@ function CategoryItem({
         <div className="mr-2 flex-shrink-0">
           {hasChildren ? (
             <svg
-              className={`w-4 h-4 text-blue-500 ${isExpanded ? '' : 'text-blue-400'}`}
+              className={`w-4 h-4 text-amber-500 ${isExpanded ? '' : 'text-amber-500'}`}
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -87,7 +87,7 @@ function CategoryItem({
             </svg>
           ) : (
             <svg
-              className="w-4 h-4 text-gray-400"
+              className="w-4 h-4 text-amber-500"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
