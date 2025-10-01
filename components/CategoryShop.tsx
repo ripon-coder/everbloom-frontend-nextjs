@@ -33,44 +33,78 @@ function CategoryItem({
 }) {
   const isExpanded = expandedIds.includes(category.id);
   const hasChildren = category.children && category.children.length > 0;
-  const paddingLeft = `pl-${2 + level * 4}`; // Dynamic padding for nested levels
 
-  const handleNameClick = () => {
+  const handleRowClick = () => {
     onCategorySelect(category.id);
-    if (hasChildren && !isExpanded) {
-      onToggleExpand(category.id);
-    }
   };
 
   return (
-    <div>
+    <div className="select-none">
+      {/* Category Row */}
       <div
-        className={`flex justify-between items-center py-2 px-0 transition-colors duration-200 text-sm text-gray-700 cursor-pointer hover:text-orange-600 ${isExpanded ? 'font-semibold' : ''}`}
+        className={`flex items-center py-1.5 px-2 rounded-md cursor-pointer group hover:bg-gray-100 transition-colors duration-150 ${
+          isExpanded ? 'bg-blue-50' : ''
+        }`}
+        onClick={handleRowClick}
+        style={{ paddingLeft: `${level * 20 + 8}px` }} // Indentation based on level
       >
-        <span onClick={handleNameClick} className="flex-grow">
+        {/* Expand/Collapse Icon */}
+        {hasChildren && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand(category.id);
+            }}
+            className="mr-1 flex-shrink-0 p-1 rounded hover:bg-gray-200 transition-colors"
+          >
+            <svg
+              className={`w-4 h-4 text-gray-600 transform transition-transform duration-200 ${
+                isExpanded ? "rotate-90" : "rotate-0"
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+        )}
+
+        {/* Category Icon */}
+        <div className="mr-2 flex-shrink-0">
+          {hasChildren ? (
+            <svg
+              className={`w-4 h-4 text-blue-500 ${isExpanded ? '' : 'text-blue-400'}`}
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+            </svg>
+          ) : (
+            <svg
+              className="w-4 h-4 text-gray-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-5L9 4H4zm7 5a1 1 0 10-2 0 1 1 0 002 0zm-3-1a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
+            </svg>
+          )}
+        </div>
+
+        {/* Category Name */}
+        <span className={`text-sm font-medium truncate ${isExpanded ? 'text-blue-700' : 'text-gray-700'}`}>
           {category.name}
         </span>
-        {hasChildren && (
-          <svg
-            className={`w-4 h-4 text-gray-500 flex-shrink-0 transform transition-transform duration-200 cursor-pointer ${
-              isExpanded ? "rotate-90" : "rotate-0"
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            onClick={() => onToggleExpand(category.id)}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        )}
       </div>
+
+      {/* Children Container */}
       {isExpanded && hasChildren && (
-        <div className={`mt-1 space-y-1 ${paddingLeft}`}>
+        <div>
           {category.children.map((child) => (
             <CategoryItem
               key={child.id}
@@ -89,7 +123,6 @@ function CategoryItem({
 
 
 export default function CategoryShop({ categories, onCategorySelect }: CategoryShopProps) {
-  // State now holds an array of expanded IDs to support multiple independent expansions.
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
 
   const handleToggleExpand = (categoryId: number) => {
@@ -114,7 +147,7 @@ export default function CategoryShop({ categories, onCategorySelect }: CategoryS
   }
 
   return (
-    <div className="space-y-1 p-2 bg-white">
+    <div className="bg-white rounded-lg p-3 space-y-1">
       {categories.map((category) => (
         <CategoryItem
           key={category.id}
