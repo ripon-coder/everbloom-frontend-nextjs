@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 
-// Define the type for a Category object (must match the one in app/shop/page.tsx)
 interface Category {
   id: number;
   parent_id: number | null;
   name: string;
   slug: string;
-  parent?: Category; // Optional parent object
+  parent?: Category;
   children: Category[];
 }
 
@@ -18,7 +17,6 @@ interface CategoryShopProps {
   selectedCategoryId: number | null;
 }
 
-// Recursive CategoryItem component
 function CategoryItem({
   category,
   level,
@@ -44,15 +42,13 @@ function CategoryItem({
 
   return (
     <div className="select-none">
-      {/* Category Row */}
       <div
         className={`flex items-center py-1.5 px-2 rounded-md cursor-pointer hover:bg-amber-50 ${
-          isSelected ? 'bg-amber-200' : ''
+          isSelected ? "bg-amber-200" : ""
         }`}
         onClick={handleRowClick}
-        style={{ paddingLeft: `${level * 20 + 8}px` }} // Indentation based on level
+        style={{ paddingLeft: `${level * 20 + 8}px` }}
       >
-        {/* Expand/Collapse Icon */}
         {hasChildren && (
           <button
             onClick={(e) => {
@@ -83,7 +79,9 @@ function CategoryItem({
         <div className="mr-2 flex-shrink-0">
           {hasChildren ? (
             <svg
-              className={`w-4 h-4 text-amber-500 ${isExpanded ? '' : 'text-amber-500'}`}
+              className={`w-4 h-4 text-amber-500 ${
+                isExpanded ? "" : "text-amber-500"
+              }`}
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -95,15 +93,25 @@ function CategoryItem({
               fill="currentColor"
               viewBox="0 0 20 20"
             >
-              <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-5L9 4H4zm7 5a1 1 0 10-2 0 1 1 0 002 0zm-3-1a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-5L9 4H4zm7 5a1 1 0 10-2 0 1 1 0 002 0zm-3-1a1 1 0 11-2 0 1 1 0 012 0z"
+                clipRule="evenodd"
+              />
             </svg>
           )}
         </div>
 
         {/* Category Name */}
-        <span className={`text-sm font-medium truncate ${
-          isSelected ? 'text-gray-900 font-semibold' : isExpanded ? 'text-gray-700' : 'text-gray-700'
-        }`}>
+        <span
+          className={`text-sm font-medium truncate ${
+            isSelected
+              ? "text-gray-900 font-semibold"
+              : isExpanded
+              ? "text-gray-700"
+              : "text-gray-700"
+          }`}
+        >
           {category.name}
         </span>
       </div>
@@ -111,7 +119,7 @@ function CategoryItem({
       {/* Children Container */}
       {isExpanded && hasChildren && (
         <div>
-        {category.children.map((child) => (
+          {category.children.map((child) => (
             <CategoryItem
               key={child.id}
               category={child}
@@ -128,34 +136,51 @@ function CategoryItem({
   );
 }
 
-
-export default function CategoryShop({ categories, onCategorySelect, selectedCategoryId }: CategoryShopProps) {
+export default function CategoryShop({
+  categories,
+  onCategorySelect,
+  selectedCategoryId,
+}: CategoryShopProps) {
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
 
+  const buildCategoryHierarchy = (categories: Category[]): Category[] => {
+    const map = new Map<number, Category>();
+    const hierarchy: Category[] = [];
+
+    categories.forEach((category) => {
+      const categoryCopy = { ...category, children: [] };
+      map.set(category.id, categoryCopy);
+    });
+
+    map.forEach((category) => {
+      if (category.parent_id !== null && map.has(category.parent_id)) {
+        const parent = map.get(category.parent_id)!;
+        parent.children.push(category);
+      } else {
+        hierarchy.push(category);
+      }
+    });
+
+    return hierarchy;
+  };
+
   const handleToggleExpand = (categoryId: number) => {
-    setExpandedIds(prevIds =>
+    setExpandedIds((prevIds) =>
       prevIds.includes(categoryId)
         ? prevIds.filter((id) => id !== categoryId)
         : [...prevIds, categoryId]
     );
   };
 
-  // Effect to ensure the single parent is always expanded if it's the only one.
-  const topLevelParentsWithChildren = categories.filter(cat => cat.parent_id === null && cat.children && cat.children.length > 0);
-  if (topLevelParentsWithChildren.length === 1) {
-    const singleParentId = topLevelParentsWithChildren[0].id;
-    if (!expandedIds.includes(singleParentId)) {
-      setExpandedIds(prevIds => [...prevIds, singleParentId]);
-    }
-  }
-
   if (categories.length === 0) {
     return <p className="text-sm text-gray-500">No categories available.</p>;
   }
 
+  const categoryTree = buildCategoryHierarchy(categories);
+
   return (
     <div className="bg-white rounded-lg p-3 space-y-1">
-      {categories.map((category) => (
+      {categoryTree.map((category) => (
         <CategoryItem
           key={category.id}
           category={category}
