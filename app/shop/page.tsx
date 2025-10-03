@@ -37,6 +37,7 @@ interface Attribute {
 
 export default function ShopPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   // Products
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -58,11 +59,19 @@ export default function ShopPage() {
     Record<string, string | null>
   >({});
 
-  // Fetch products function
+  // Set category slug from URL on mount
+  useEffect(() => {
+    const categoryFromUrl = searchParams.get("category");
+    if (categoryFromUrl) {
+      setCategorySlug(categoryFromUrl);
+    }
+  }, [searchParams]);
+
   const fetchProducts = useCallback(
     async (page = 1, append = false) => {
       if (page === 1) setIsLoadingProducts(true);
       else setIsFetchingNextPage(true);
+
       try {
         const params = new URLSearchParams({
           current_page: page.toString(),
@@ -70,7 +79,7 @@ export default function ShopPage() {
         });
 
         if (selectedBrand) params.append("brand_id", selectedBrand);
-        if (CategorySlug) params.append("category", CategorySlug.toString());
+        if (CategorySlug) params.append("category", CategorySlug);
 
         Object.entries(selectedAttributes).forEach(([key, value]) => {
           if (value) params.append(key.toLowerCase(), value);
@@ -81,7 +90,6 @@ export default function ShopPage() {
         router.push(`?${params.toString()}`, { scroll: false });
 
         const response = await fetch(`/api/products?${params.toString()}`);
-
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
 
@@ -124,7 +132,6 @@ export default function ShopPage() {
 
         setCategories(apiData.categories || []);
         setBrands(apiData.brands || []);
-        setAttributes(apiData.attributes || []);
       } catch (error) {
         console.error("Failed to fetch filters:", error);
       } finally {
@@ -141,7 +148,9 @@ export default function ShopPage() {
   }, [fetchProducts]);
 
   const handleLoadMore = () => {
-    if (currentPage < totalPages) fetchProducts(currentPage + 1, true);
+    if (currentPage < totalPages && !isFetchingNextPage) {
+      fetchProducts(currentPage + 1, true);
+    }
   };
 
   const resetFilters = () => {

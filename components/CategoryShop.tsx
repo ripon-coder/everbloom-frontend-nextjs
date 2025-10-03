@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect,useState } from "react";
 
 interface Category {
   id: number;
@@ -20,22 +20,21 @@ interface CategoryShopProps {
 function CategoryItem({
   category,
   level,
-  expandedIds,
+  expandedSlug,
   setCategorySlug,
   onToggleExpand,
   selectedCategorySlug,
 }: {
   category: Category;
   level: number;
-  expandedIds: number[];
+  expandedSlug: string[];
   setCategorySlug: (slug: string) => void;
-  onToggleExpand: (categoryId: number) => void;
+  onToggleExpand: (slug: string) => void;
   selectedCategorySlug: string | null;
 }) {
-  const isExpanded = expandedIds.includes(category.id);
+  const isExpanded = expandedSlug.includes(category.slug);
   const hasChildren = category.children && category.children.length > 0;
   const isSelected = selectedCategorySlug === category.slug;
-
   const handleRowClick = () => {
     setCategorySlug(category.slug);
   };
@@ -53,7 +52,7 @@ function CategoryItem({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onToggleExpand(category.id);
+              onToggleExpand(category.slug);
             }}
             className="mr-1 flex-shrink-0 p-1 rounded hover:bg-gray-200"
           >
@@ -124,7 +123,7 @@ function CategoryItem({
               key={child.id}
               category={child}
               level={level + 1}
-              expandedIds={expandedIds}
+              expandedSlug={expandedSlug}
               setCategorySlug={setCategorySlug}
               onToggleExpand={onToggleExpand}
               selectedCategorySlug={selectedCategorySlug}
@@ -141,8 +140,7 @@ export default function CategoryShop({
   selectedCategorySlug,
   setCategorySlug,
 }: CategoryShopProps) {
-  const [expandedIds, setExpandedIds] = useState<number[]>([]);
-
+  const [expandedSlug, setExpandedSlug] = useState<string[]>([]);
   const buildCategoryHierarchy = (categories: Category[]): Category[] => {
     const map = new Map<number, Category>();
     const hierarchy: Category[] = [];
@@ -164,20 +162,44 @@ export default function CategoryShop({
     return hierarchy;
   };
 
-  const handleToggleExpand = (categoryId: number) => {
-    setExpandedIds((prevIds) =>
-      prevIds.includes(categoryId)
-        ? prevIds.filter((id) => id !== categoryId)
-        : [...prevIds, categoryId]
+  const handleToggleExpand = (CatSlug: string) => {
+    setExpandedSlug((prevSlug) =>
+      prevSlug.includes(CatSlug)
+        ? prevSlug.filter((slug) => slug !== CatSlug)
+        : [...prevSlug, CatSlug]
     );
   };
+
+  // Get all parent slugs of a selected category to expand tree
+  const getParentSlugs = (slug: string, categories: Category[]): string[] => {
+    const map = new Map<number, Category>();
+    categories.forEach((cat) => map.set(cat.id, cat));
+    const parentSlugs: string[] = [];
+    const findCategory = (cats: Category[]): Category | undefined =>
+      cats.find((c) => c.slug === slug);
+
+    let current = findCategory(categories);
+    while (current && current.parent_id) {
+      const parent = map.get(current.parent_id);
+      if (parent) {
+        parentSlugs.push(parent.slug);
+        current = parent;
+      } else break;
+    }
+    return parentSlugs;
+  };
+
+  useEffect(() => {
+    if (selectedCategorySlug) {
+      setExpandedSlug(getParentSlugs(selectedCategorySlug, categories));
+    }
+  }, [selectedCategorySlug, categories]);
 
   if (categories.length === 0) {
     return <p className="text-sm text-gray-500">No categories available.</p>;
   }
 
   const categoryTree = buildCategoryHierarchy(categories);
-
   return (
     <div className="bg-white rounded-lg p-3 space-y-1">
       {categoryTree.map((category) => (
@@ -185,7 +207,7 @@ export default function CategoryShop({
           key={category.id}
           category={category}
           level={0}
-          expandedIds={expandedIds}
+          expandedSlug={expandedSlug}
           setCategorySlug={setCategorySlug}
           onToggleExpand={handleToggleExpand}
           selectedCategorySlug={selectedCategorySlug}

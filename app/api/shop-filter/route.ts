@@ -2,24 +2,17 @@ import { NextResponse } from "next/server";
 import { API_BASE_URL } from "@/lib/config";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const categorySlug = searchParams.get('category');
-
   try {
-    // Construct the URL for the external API, including category slug if it exists
-    const externalApiUrl = new URL(`${API_BASE_URL}/shop-filter`);
-    if (categorySlug) {
-      externalApiUrl.searchParams.append('category', categorySlug);
-    }
 
-    // Fetch all filter data from the external API
-    const response = await fetch(externalApiUrl.toString());
+    // Fetch data from external API
+    const response = await fetch(`${API_BASE_URL}/shop-filter`);
     if (!response.ok) {
       throw new Error(`Failed to fetch shop filters: ${response.status}`);
     }
+
     const data = await response.json();
 
-    // Pass through the external API response directly without manipulation
+    // Return data to client
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error in /api/shop-filter:", error);
