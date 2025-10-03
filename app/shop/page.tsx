@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ProductGrid from "@/components/ProductGrid";
 import CategoryShop from "@/components/CategoryShop";
 import BrandShop from "@/components/BrandShop";
-import AttributeShop from "@/components/AttributeShop";
+// import AttributeShop from "@/components/AttributeShop";
 import { Product } from "@/components/ProductGrid";
 
 interface Brand {
@@ -36,8 +36,7 @@ interface Attribute {
 }
 
 export default function ShopPage() {
-  const searchParams = useSearchParams();
-
+  const router = useRouter();
   // Products
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -53,16 +52,73 @@ export default function ShopPage() {
 
   // Selected filters
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [CategorySlug, setCategorySlug] = useState<string | null>(null);
   const [maxPrice, setMaxPrice] = useState<number>(2000);
-  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string | null>>({});
+  const [selectedAttributes, setSelectedAttributes] = useState<
+    Record<string, string | null>
+  >({});
+
+  // Fetch products function
+  const fetchProducts = useCallback(
+    async (page = 1, append = false) => {
+      if (page === 1) setIsLoadingProducts(true);
+      else setIsFetchingNextPage(true);
+      try {
+        const params = new URLSearchParams({
+          current_page: page.toString(),
+          per_page: "8",
+        });
+
+        if (selectedBrand) params.append("brand_id", selectedBrand);
+        if (CategorySlug) params.append("category", CategorySlug.toString());
+
+        Object.entries(selectedAttributes).forEach(([key, value]) => {
+          if (value) params.append(key.toLowerCase(), value);
+        });
+
+        if (maxPrice < 2000) params.append("max_price", maxPrice.toString());
+
+        router.push(`?${params.toString()}`, { scroll: false });
+
+        const response = await fetch(`/api/products?${params.toString()}`);
+
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
+
+        const responseData = await response.json();
+        const newProducts: Product[] = responseData.data.products;
+        const pagination = responseData.data.pagination;
+
+        setProducts((prev) =>
+          append
+            ? [
+                ...prev,
+                ...newProducts.filter(
+                  (p) => !prev.some((ep) => ep.id === p.id)
+                ),
+              ]
+            : newProducts
+        );
+        setCurrentPage(Number(pagination.current_page));
+        setTotalPages(Number(pagination.last_page));
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+        if (!append) setProducts([]);
+      } finally {
+        setIsLoadingProducts(false);
+        setIsFetchingNextPage(false);
+      }
+    },
+    [selectedBrand, CategorySlug, maxPrice, selectedAttributes, router]
+  );
 
   // Fetch filters on mount
   useEffect(() => {
     const fetchFilters = async () => {
       try {
         const response = await fetch("/api/shop-filter");
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         const apiData = data.data || data;
 
@@ -79,49 +135,6 @@ export default function ShopPage() {
     fetchFilters();
   }, []);
 
-  // Fetch products function
-  const fetchProducts = useCallback(
-    async (page = 1, append = false) => {
-      if (page === 1) setIsLoadingProducts(true);
-      else setIsFetchingNextPage(true);
-
-      try {
-        const params = new URLSearchParams({
-          current_page: page.toString(),
-          per_page: "8",
-        });
-        if (selectedBrand) params.append("brand_id", selectedBrand);
-        if (selectedCategoryId) params.append("category_id", selectedCategoryId.toString());
-        Object.entries(selectedAttributes).forEach(([key, value]) => {
-          if (value) params.append(key.toLowerCase(), value);
-        });
-        if (maxPrice < 2000) params.append("max_price", maxPrice.toString());
-
-        const response = await fetch(`/api/products?${params.toString()}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const responseData = await response.json();
-
-        const newProducts: Product[] = responseData.data.products;
-        const pagination = responseData.data.pagination;
-
-        setProducts(prev =>
-          append
-            ? [...prev, ...newProducts.filter(p => !prev.some(ep => ep.id === p.id))]
-            : newProducts
-        );
-        setCurrentPage(Number(pagination.current_page));
-        setTotalPages(Number(pagination.last_page));
-      } catch (error) {
-        console.error("Failed to fetch products:", error);
-        if (!append) setProducts([]);
-      } finally {
-        setIsLoadingProducts(false);
-        setIsFetchingNextPage(false);
-      }
-    },
-    [selectedBrand, selectedCategoryId, maxPrice, selectedAttributes]
-  );
-
   // Fetch products on filter change
   useEffect(() => {
     fetchProducts(1, false);
@@ -134,7 +147,7 @@ export default function ShopPage() {
   const resetFilters = () => {
     setSelectedAttributes({});
     setSelectedBrand(null);
-    setSelectedCategoryId(null);
+    setCategorySlug(null);
     setMaxPrice(2000);
     fetchProducts(1, false);
   };
@@ -162,8 +175,8 @@ export default function ShopPage() {
             ) : (
               <CategoryShop
                 categories={isLoadingFilters ? [] : categories}
-                onCategorySelect={setSelectedCategoryId}
-                selectedCategoryId={selectedCategoryId}
+                setCategorySlug={setCategorySlug}
+                selectedCategorySlug={CategorySlug}
               />
             )}
           </div>
@@ -176,8 +189,10 @@ export default function ShopPage() {
               <BrandShop
                 brands={isLoadingFilters ? [] : brands}
                 selectedBrand={selectedBrand}
-                onBrandSelect={brandId =>
-                  setSelectedBrand(prev => (prev === brandId ? null : brandId))
+                onBrandSelect={(brandId) =>
+                  setSelectedBrand((prev) =>
+                    prev === brandId ? null : brandId
+                  )
                 }
               />
             )}
@@ -191,7 +206,7 @@ export default function ShopPage() {
               max={2000}
               step={50}
               value={maxPrice}
-              onChange={e => setMaxPrice(Number(e.target.value))}
+              onChange={(e) => setMaxPrice(Number(e.target.value))}
               className="w-full"
             />
           </div>
@@ -206,7 +221,10 @@ export default function ShopPage() {
 
         {/* Products */}
         <div className="md:col-span-3">
-          <ProductGrid products={products} isLoading={isLoadingProducts && products.length === 0} />
+          <ProductGrid
+            products={products}
+            isLoading={isLoadingProducts && products.length === 0}
+          />
           {currentPage < totalPages && (
             <div className="flex justify-center mt-6">
               <button
@@ -221,8 +239,19 @@ export default function ShopPage() {
                     fill="none"
                     viewBox="0 0 24 24"
                   >
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"></circle>
-                    <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75"></path>
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      className="opacity-25"
+                    ></circle>
+                    <path
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      className="opacity-75"
+                    ></path>
                   </svg>
                 )}
                 {isFetchingNextPage ? "Loading..." : "Load More"}

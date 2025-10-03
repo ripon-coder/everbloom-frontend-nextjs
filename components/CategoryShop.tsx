@@ -13,31 +13,31 @@ interface Category {
 
 interface CategoryShopProps {
   categories: Category[];
-  onCategorySelect: (categoryId: number) => void;
-  selectedCategoryId: number | null;
+  selectedCategorySlug: string | null;
+  setCategorySlug: (slug: string) => void;
 }
 
 function CategoryItem({
   category,
   level,
   expandedIds,
-  onCategorySelect,
+  setCategorySlug,
   onToggleExpand,
-  selectedCategoryId,
+  selectedCategorySlug,
 }: {
   category: Category;
   level: number;
   expandedIds: number[];
-  onCategorySelect: (categoryId: number) => void;
+  setCategorySlug: (slug: string) => void;
   onToggleExpand: (categoryId: number) => void;
-  selectedCategoryId: number | null;
+  selectedCategorySlug: string | null;
 }) {
   const isExpanded = expandedIds.includes(category.id);
   const hasChildren = category.children && category.children.length > 0;
-  const isSelected = selectedCategoryId === category.id;
+  const isSelected = selectedCategorySlug === category.slug;
 
   const handleRowClick = () => {
-    onCategorySelect(category.id);
+    setCategorySlug(category.slug);
   };
 
   return (
@@ -125,9 +125,9 @@ function CategoryItem({
               category={child}
               level={level + 1}
               expandedIds={expandedIds}
-              onCategorySelect={onCategorySelect}
+              setCategorySlug={setCategorySlug}
               onToggleExpand={onToggleExpand}
-              selectedCategoryId={selectedCategoryId}
+              selectedCategorySlug={selectedCategorySlug}
             />
           ))}
         </div>
@@ -138,8 +138,8 @@ function CategoryItem({
 
 export default function CategoryShop({
   categories,
-  onCategorySelect,
-  selectedCategoryId,
+  selectedCategorySlug,
+  setCategorySlug,
 }: CategoryShopProps) {
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
 
@@ -186,9 +186,9 @@ export default function CategoryShop({
           category={category}
           level={0}
           expandedIds={expandedIds}
-          onCategorySelect={onCategorySelect}
+          setCategorySlug={setCategorySlug}
           onToggleExpand={handleToggleExpand}
-          selectedCategoryId={selectedCategoryId}
+          selectedCategorySlug={selectedCategorySlug}
         />
       ))}
     </div>
