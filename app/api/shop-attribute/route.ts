@@ -3,38 +3,30 @@ import { API_BASE_URL } from "@/lib/config";
 
 export async function GET(request: Request) {
   try {
-    console.log("API route /api/shop-attribute called");
-    
+    // Get query parameters from request
     const { searchParams } = new URL(request.url);
-    const categorySlug = searchParams.get('category');
-    const categoryId = searchParams.get('category_id');
-    
-    // Construct the URL for the external API for shop attributes
+    const categorySlug = searchParams.get("category");
+    const categoryId = searchParams.get("category_id");
+    console.log("any", { categorySlug, categoryId });
+    // Build external API URL
     const externalApiUrl = new URL(`${API_BASE_URL}/shop-attribute`);
-    
-    // Pass category slug to external API if present
-    if (categorySlug) {
-      externalApiUrl.searchParams.append('category', categorySlug);
-    }
-    
-    // Pass category ID to external API if present
-    if (categoryId) {
-      externalApiUrl.searchParams.append('category_id', categoryId);
-    }
-    
-    console.log("Calling external API:", externalApiUrl.toString());
 
-    // Fetch shop attributes from the external API
+    if (categorySlug) {
+      externalApiUrl.searchParams.append("category", categorySlug);
+    }
+
+    if (categoryId) {
+      externalApiUrl.searchParams.append("category_id", categoryId);
+    }
+
+    // Fetch data from external API
     const response = await fetch(externalApiUrl.toString());
-    console.log("External API response status:", response.status);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch shop attributes: ${response.status}`);
     }
-    const data = await response.json();
-    console.log("External API response data:", data);
 
-    // Pass through the external API response directly without manipulation
+    const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error in /api/shop-attribute:", error);

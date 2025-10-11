@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Category {
   id: number;
@@ -141,6 +141,7 @@ export default function CategoryShop({
   setCategorySlug,
 }: CategoryShopProps) {
   const [expandedSlug, setExpandedSlug] = useState<string[]>([]);
+
   const buildCategoryHierarchy = (categories: Category[]): Category[] => {
     const map = new Map<number, Category>();
     const hierarchy: Category[] = [];
@@ -149,7 +150,6 @@ export default function CategoryShop({
       const categoryCopy = { ...category, children: [] };
       map.set(category.id, categoryCopy);
     });
-
     map.forEach((category) => {
       if (category.parent_id !== null && map.has(category.parent_id)) {
         const parent = map.get(category.parent_id)!;
@@ -171,23 +171,28 @@ export default function CategoryShop({
   };
 
   // Get all parent slugs of a selected category to expand tree
-  const getParentSlugs = (slug: string, categories: Category[]): string[] => {
-    const map = new Map<number, Category>();
-    categories.forEach((cat) => map.set(cat.id, cat));
-    const parentSlugs: string[] = [];
-    const findCategory = (cats: Category[]): Category | undefined =>
-      cats.find((c) => c.slug === slug);
+function getParentSlugs(slug: string, categories: Category[]): string[] {
 
-    let current = findCategory(categories);
-    while (current && current.parent_id) {
-      const parent = map.get(current.parent_id);
-      if (parent) {
-        parentSlugs.push(parent.slug);
-        current = parent;
-      } else break;
-    }
-    return parentSlugs;
-  };
+  const map = new Map<number, Category>();
+  const parentSlugs: string[] = [];
+  let current = categories.find((cat)=>cat.slug === slug);
+  categories.forEach((category) => {
+    const categoryCopy = { ...category, children: [] };
+    map.set(category.id, categoryCopy);
+  });
+
+  while(current && current.parent_id) {
+    const parent = map.get(current.parent_id);
+    if(parent) {
+      parentSlugs.push(parent.slug);
+      current = parent;
+    } else break
+  }
+  return parentSlugs.reverse();
+}
+
+
+  // End
 
   useEffect(() => {
     if (selectedCategorySlug) {

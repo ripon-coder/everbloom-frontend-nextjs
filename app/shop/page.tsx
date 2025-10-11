@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ProductGrid from "@/components/ProductGrid";
 import CategoryShop from "@/components/CategoryShop";
 import BrandShop from "@/components/BrandShop";
-// import AttributeShop from "@/components/AttributeShop";
+import AttributeShop from "@/components/AttributeShop";
 import { Product } from "@/components/ProductGrid";
 
 interface Brand {
@@ -124,7 +124,9 @@ export default function ShopPage() {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const response = await fetch("/api/shop-filter");
+        const response = await fetch(
+          `/api/shop-filter?category=${CategorySlug || ""}`
+        );
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
@@ -141,6 +143,30 @@ export default function ShopPage() {
 
     fetchFilters();
   }, []);
+
+  // Attributes fetching is commented out for now
+  useEffect(() => {
+    const fetchAttribute = async () => {
+      try {
+        const params = new URLSearchParams({
+          category: CategorySlug || "",
+        });
+        const response = await fetch(
+          "/api/shop-attribute" + "?" + params.toString()
+        );
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        const apiData = data.data || data;
+        setAttributes(apiData.attributes || []);
+      } catch (error) {
+        console.error("Failed to fetch filters:", error);
+      } finally {
+        setIsLoadingFilters(false);
+      }
+    };
+    fetchAttribute();
+  }, [CategorySlug]);
 
   // Fetch products on filter change
   useEffect(() => {
@@ -168,14 +194,17 @@ export default function ShopPage() {
         <div className="bg-white rounded-xl shadow-md p-4 space-y-6">
           <h2 className="text-lg font-semibold">Filter Products</h2>
 
-          {/* <AttributeShop
+          <AttributeShop
             attributes={attributes}
             selectedAttributes={selectedAttributes}
             onAttributeSelect={(attr, val) =>
-              setSelectedAttributes(prev => ({ ...prev, [attr]: prev[attr] === val ? null : val }))
+              setSelectedAttributes((prev) => ({
+                ...prev,
+                [attr]: prev[attr] === val ? null : val,
+              }))
             }
             isLoading={isLoadingFilters}
-          /> */}
+          />
 
           <div>
             <h3 className="font-medium mb-2">Categories</h3>
