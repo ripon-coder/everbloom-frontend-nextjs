@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   try {
 
     // Fetch data from external API
-    const response = await fetch(`${API_BASE_URL}/shop-filter`);
+    const response = await fetch(`${API_BASE_URL}/shop-category-brand`);
     if (!response.ok) {
       throw new Error(`Failed to fetch shop filters: ${response.status}`);
     }

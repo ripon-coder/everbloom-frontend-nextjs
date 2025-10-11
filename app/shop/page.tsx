@@ -125,7 +125,7 @@ export default function ShopPage() {
     const fetchFilters = async () => {
       try {
         const response = await fetch(
-          `/api/shop-filter?category=${CategorySlug || ""}`
+          `/api/shop-category-brand?category=${CategorySlug || ""}`
         );
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
