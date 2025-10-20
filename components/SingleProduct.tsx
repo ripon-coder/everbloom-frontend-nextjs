@@ -2,17 +2,27 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { FaHeart, FaRegHeart } from "react-icons/fa"; // ❤️ icons
+import { FaHeart, FaRegHeart } from "react-icons/fa";
+import customImageLoader from "@/lib/image-loader";
 import productImg from "@/public/headphone.jpeg";
 
 export default function ProductPage() {
   const [selectedColor, setSelectedColor] = useState("Black");
   const [selectedType, setSelectedType] = useState("Wireless");
   const [isFavorite, setIsFavorite] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   // ✅ Mock product data
   const stock = 12;
   const deliveryDays = [2, 4];
+
+  const incrementQty = () => {
+    if (quantity < stock) setQuantity((prev) => prev + 1);
+  };
+
+  const decrementQty = () => {
+    if (quantity > 1) setQuantity((prev) => prev - 1);
+  };
 
   return (
     <div className="p-2 bg-white">
@@ -22,7 +32,8 @@ export default function ProductPage() {
           {/* Main Image with Favorite Button */}
           <div className="relative w-full h-80 sm:h-96 border rounded-lg overflow-hidden">
             <Image
-              src={productImg}
+              src={productImg.src}
+              loader={customImageLoader}
               alt="Headphone"
               fill
               className="object-cover"
@@ -48,10 +59,11 @@ export default function ProductPage() {
                 className="relative w-20 h-20 border rounded-md overflow-hidden cursor-pointer hover:ring-2 hover:ring-orange-500"
               >
                 <Image
-                  src={productImg}
+                  src={productImg.src} // ✅ fixed
                   alt={`thumb-${i}`}
                   fill
                   className="object-cover"
+                  loader={customImageLoader}
                 />
               </div>
             ))}
@@ -139,9 +151,19 @@ export default function ProductPage() {
           <div className="flex items-center gap-3 mt-2">
             <span className="text-sm font-medium">Quantity:</span>
             <div className="flex items-center border rounded-md">
-              <button className="px-3 py-1 hover:bg-gray-200">-</button>
-              <span className="px-4">1</span>
-              <button className="px-3 py-1 hover:bg-gray-200">+</button>
+              <button
+                onClick={decrementQty}
+                className="px-3 py-1 hover:bg-gray-200"
+              >
+                -
+              </button>
+              <span className="px-4">{quantity}</span>
+              <button
+                onClick={incrementQty}
+                className="px-3 py-1 hover:bg-gray-200"
+              >
+                +
+              </button>
             </div>
           </div>
 
