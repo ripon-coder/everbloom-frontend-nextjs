@@ -38,7 +38,7 @@ export default function ProductClient({ product }: Props) {
   const [selectedVariant, setSelectedVariant] = useState(product.variants[0]);
   const [quantity, setQuantity] = useState(1);
   const [mainImage, setMainImage] = useState(
-    selectedVariant.images[0] || product.images[0]
+    selectedVariant?.images?.[0] || product?.images?.[0] || "/placeholder.png"
   );
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -59,21 +59,24 @@ export default function ProductClient({ product }: Props) {
     );
     if (variant) {
       setSelectedVariant(variant);
-      setMainImage(variant.images[0] || product.images[0]);
+      setMainImage(variant?.images?.[0] || product?.images?.[0] || "/placeholder.png");
     }
   };
 
   // Get unique values for each attribute type
   const getUniqueAttributeValues = (attrName: string) => {
     const values = product.variants
-      .map(
-        (v) =>
-          v.attributes.find((a) => a.attribute_name === attrName)
-            ?.attribute_value
+      .map((v) =>
+        v.attributes.find((a) => a.attribute_name === attrName)?.attribute_value
       )
       .filter(Boolean) as string[];
     return Array.from(new Set(values));
   };
+
+  // Get all unique images for thumbnails
+  const allImages = Array.from(
+    new Set([...(selectedVariant?.images || []), ...(product?.images || [])])
+  );
 
   return (
     <div className="p-4 bg-white min-h-screen">
@@ -101,24 +104,22 @@ export default function ProductClient({ product }: Props) {
           </div>
 
           {/* Thumbnails */}
-          <div className="flex gap-3 mt-4">
-            {[...selectedVariant.images, ...product.images]
-              .filter((v, i, a) => a.indexOf(v) === i) // unique images
-              .map((img, i) => (
-                <div
-                  key={i}
-                  className="relative w-20 h-20 border rounded-md overflow-hidden cursor-pointer hover:ring-2 hover:ring-orange-500"
-                  onClick={() => setMainImage(img)}
-                >
-                  <Image
-                    src={img}
-                    alt={`${product.name}-thumb-${i}`}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-              ))}
+          <div className="flex gap-3 mt-4 flex-wrap">
+            {allImages.map((img, i) => (
+              <div
+                key={i}
+                className="relative w-20 h-20 border rounded-md overflow-hidden cursor-pointer hover:ring-2 hover:ring-orange-500"
+                onClick={() => setMainImage(img)}
+              >
+                <Image
+                  src={img}
+                  alt={`${product.name}-thumb-${i}`}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -170,9 +171,7 @@ export default function ProductClient({ product }: Props) {
           <p className="text-sm mt-2">
             <span className="font-medium">Stock:</span>{" "}
             {selectedVariant.stock > 0 ? (
-              <span className="text-green-600">
-                {selectedVariant.stock} available
-              </span>
+              <span className="text-green-600">{selectedVariant.stock} available</span>
             ) : (
               <span className="text-red-500">Out of stock</span>
             )}
@@ -181,19 +180,9 @@ export default function ProductClient({ product }: Props) {
           <div className="flex items-center gap-3 mt-2">
             <span className="text-sm font-medium">Quantity:</span>
             <div className="flex items-center border rounded-md">
-              <button
-                onClick={decrementQty}
-                className="px-3 py-1 hover:bg-gray-200"
-              >
-                -
-              </button>
+              <button onClick={decrementQty} className="px-3 py-1 hover:bg-gray-200">-</button>
               <span className="px-4">{quantity}</span>
-              <button
-                onClick={incrementQty}
-                className="px-3 py-1 hover:bg-gray-200"
-              >
-                +
-              </button>
+              <button onClick={incrementQty} className="px-3 py-1 hover:bg-gray-200">+</button>
             </div>
           </div>
 
