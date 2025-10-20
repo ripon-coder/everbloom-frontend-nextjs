@@ -82,7 +82,7 @@ export default function ShopPage() {
           router.push(`?${urlParams.toString()}`, { scroll: false });
         }
 
-        const response = await fetch(`/api/products?${params.toString()}`);
+        const response = await fetch(`/api/shop-products?${params.toString()}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         const newProducts: Product[] = data.data.products;
