@@ -1,3 +1,5 @@
+// checkout.ts
+
 import toast from "react-hot-toast";
 
 export interface CheckoutItem {

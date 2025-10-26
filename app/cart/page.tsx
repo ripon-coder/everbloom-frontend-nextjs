@@ -1,3 +1,4 @@
+// Cart Page
 "use client";
 
 import Image from "next/image";
@@ -21,25 +22,36 @@ interface VariantAPI {
   id: number;
   product_id: number;
   sku: string;
+  buying_price?: string | null;
   sell_price: string;
   discount_price: string;
-  weight: string;
+  discount_amount?: string | null;
   stock: number;
-  status: string;
+  weight: string;
+  images: string[];
+  attributes: {
+    id: number;
+    product_variant_id: number;
+    attribute_id: number;
+    attribute_value_id: number;
+    attribute_name: string;
+    is_image: number;
+    attribute_value: string;
+  }[];
 }
 
-type CartItem = VariantAPI & {
-  quantity: number;
-  fallbackImage?: string;
-  name?: string;
-  skuLocal?: string;
-  slug: string;
-  isDisabled?: boolean;
-  isLoadingApi?: boolean;
-};
-
 export default function Cart() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<
+    (VariantAPI & {
+      quantity: number;
+      fallbackImage?: string;
+      name?: string;
+      skuLocal?: string;
+      slug: string;
+      isDisabled?: boolean;
+      isLoadingApi?: boolean;
+    })[]
+  >([]);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [cartLoaded, setCartLoaded] = useState(false);
 
@@ -51,15 +63,16 @@ export default function Cart() {
     }
 
     // Initialize skeleton items
-    const initialCart: CartItem[] = localCart.map((item) => ({
+    const initialCart = localCart.map((item) => ({
       id: item.variantId,
       product_id: 0,
       sku: "",
-      discount_price: String(item.price || 0), // string type
+      discount_price: item.price || 0,
       sell_price: "0",
       stock: 1,
       weight: "0",
-      status: "active",
+      images: [],
+      attributes: [],
       quantity: item.quantity,
       fallbackImage: item.image,
       name: item.name,
@@ -71,9 +84,9 @@ export default function Cart() {
 
     setCartItems(initialCart);
 
-    // Fetch all variants in one POST request
     const variantIds = localCart.map((item) => item.variantId);
 
+    // Fetch all variants in one POST request
     fetch("/api/variants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -90,13 +103,11 @@ export default function Cart() {
             if (variant) {
               return {
                 ...ci,
-                product_id: variant.product_id,
-                sku: variant.sku,
-                discount_price: String(variant.discount_price),
-                sell_price: variant.sell_price,
-                stock: variant.stock,
-                status: variant.status,
-                isDisabled: variant.status !== "active",
+                ...variant,
+                quantity: ci.quantity,
+                fallbackImage: variant.images?.[0] || ci.fallbackImage,
+                skuLocal: ci.skuLocal || variant.sku,
+                isDisabled: variant.stock <= 0,
                 isLoadingApi: false,
               };
             }
@@ -214,11 +225,14 @@ export default function Cart() {
                         <p className="text-sm text-gray-500">
                           {item.isLoadingApi ? (
                             <span className="bg-gray-200 rounded w-40 h-3 inline-block animate-pulse" />
+                          ) : item.attributes.length > 0 ? (
+                            item.attributes
+                              .map((a) => `${a.attribute_name}: ${a.attribute_value}`)
+                              .join(", ")
                           ) : (
                             "No attributes"
                           )}
                         </p>
-
                         <p className="text-orange-600 font-semibold">
                           {item.isLoadingApi ? (
                             <span className="bg-gray-200 rounded w-16 h-4 inline-block animate-pulse" />
@@ -226,7 +240,6 @@ export default function Cart() {
                             `৳ ${Number(item.discount_price)}`
                           )}
                         </p>
-
                         {item.isDisabled && !item.isLoadingApi && (
                           <p className="text-red-500 text-xs">Product not available</p>
                         )}
@@ -304,7 +317,7 @@ export default function Cart() {
                   discount_price: Number(item.discount_price),
                   sku: item.skuLocal || "Unknown SKU",
                   slug: item.slug,
-                  attributeIds: [],
+                  attributeIds: item.attributes.map((a) => a.attribute_id),
                 }));
 
               setCheckoutItems(checkoutData);

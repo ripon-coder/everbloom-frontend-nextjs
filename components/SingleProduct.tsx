@@ -6,16 +6,10 @@ interface ProductPageProps {
 }
 
 export default async function ProductPage({ slug }: ProductPageProps) {
-  console.log("Product slug:", slug);
-
   if (!slug) return notFound();
-
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-
+  const baseUrl = process.env.NEXT_PUBLIC_ROOT_URL;
   try {
-    // ✅ Correct API URL with query param
     const res = await fetch(`${baseUrl}/api/product?slug=${slug}`, {
-      next: { revalidate: 10 },
     });
 
     if (!res.ok) throw new Error(`Failed to fetch product: ${res.status}`);
