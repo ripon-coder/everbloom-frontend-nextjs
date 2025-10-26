@@ -7,8 +7,6 @@ export interface CartItem {
   name: string;
   price: number;
   image: string;
-  sku: string;
-  attributeIds?: number[];
   slug: string; // stored for reference
 }
 
@@ -33,7 +31,6 @@ function safeParseCart(): CartItem[] {
         typeof item.name === "string" &&
         typeof item.price === "number" &&
         typeof item.image === "string" &&
-        typeof item.sku === "string" &&
         typeof item.slug === "string"
     );
 
@@ -62,7 +59,6 @@ export function addToCart(item: CartItem) {
   if (index !== -1) {
     // Update quantity and attributes, keep slug
     cart[index].quantity = Math.min(cart[index].quantity + item.quantity, item.quantity);
-    cart[index].attributeIds = item.attributeIds;
     cart[index].slug = item.slug;
   } else {
     cart.unshift(item); // append to end to preserve order

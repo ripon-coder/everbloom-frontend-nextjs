@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FaTrash } from "react-icons/fa";
 import { getCart, removeFromCart } from "@/lib/cart";
-import { fetchVariant, Variant } from "@/lib/variants";
 import { setCheckoutItems } from "@/lib/checkout";
 
 interface LocalCartItem {
@@ -18,30 +17,49 @@ interface LocalCartItem {
   slug: string;
 }
 
+interface VariantAPI {
+  id: number;
+  product_id: number;
+  sku: string;
+  sell_price: string;
+  discount_price: string;
+  weight: string;
+  stock: number;
+  status: string;
+}
+
+type CartItem = VariantAPI & {
+  quantity: number;
+  fallbackImage?: string;
+  name?: string;
+  skuLocal?: string;
+  slug: string;
+  isDisabled?: boolean;
+  isLoadingApi?: boolean;
+};
+
 export default function Cart() {
-  const [cartItems, setCartItems] = useState<(Variant & {
-    quantity: number;
-    fallbackImage?: string;
-    name?: string;
-    skuLocal?: string;
-    slug: string;
-    isDisabled?: boolean;
-    isLoadingApi?: boolean;
-  })[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [cartLoaded, setCartLoaded] = useState(false);
 
   useEffect(() => {
     const localCart = getCart() as LocalCartItem[];
+    if (!localCart || localCart.length === 0) {
+      setCartLoaded(true);
+      return;
+    }
 
-    const initialCart = localCart.map(item => ({
+    // Initialize skeleton items
+    const initialCart: CartItem[] = localCart.map((item) => ({
       id: item.variantId,
       product_id: 0,
       sku: "",
-      discount_price: item.price || 0,
+      discount_price: String(item.price || 0), // string type
+      sell_price: "0",
       stock: 1,
-      images: [],
-      attributes: [],
+      weight: "0",
+      status: "active",
       quantity: item.quantity,
       fallbackImage: item.image,
       name: item.name,
@@ -53,42 +71,50 @@ export default function Cart() {
 
     setCartItems(initialCart);
 
-    localCart.forEach(async (item) => {
-      try {
-        const variant = await fetchVariant(item.variantId);
-        setCartItems(prevItems =>
-          prevItems.map(ci =>
-            ci.id === item.variantId
-              ? {
-                  ...variant,
-                  quantity: ci.quantity,
-                  fallbackImage: item.image,
-                  name: item.name,
-                  skuLocal: item.sku || "Unknown SKU",
-                  slug: item.slug,
-                  isDisabled: false,
-                  isLoadingApi: false,
-                }
-              : ci
-          )
-        );
-      } catch {
-        setCartItems(prevItems =>
-          prevItems.map(ci =>
-            ci.id === item.variantId
-              ? { ...ci, isDisabled: true, isLoadingApi: false }
-              : ci
-          )
-        );
-      }
-    });
+    // Fetch all variants in one POST request
+    const variantIds = localCart.map((item) => item.variantId);
 
-    setCartLoaded(true);
+    fetch("/api/variants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: variantIds }),
+    })
+      .then((res) => res.json())
+      .then((resData) => {
+        if (!resData.status || !resData.data) throw new Error("No variants found");
+        const variants: VariantAPI[] = resData.data;
+
+        setCartItems((prevItems) =>
+          prevItems.map((ci) => {
+            const variant = variants.find((v) => v.id === ci.id);
+            if (variant) {
+              return {
+                ...ci,
+                product_id: variant.product_id,
+                sku: variant.sku,
+                discount_price: String(variant.discount_price),
+                sell_price: variant.sell_price,
+                stock: variant.stock,
+                status: variant.status,
+                isDisabled: variant.status !== "active",
+                isLoadingApi: false,
+              };
+            }
+            return { ...ci, isDisabled: true, isLoadingApi: false };
+          })
+        );
+      })
+      .catch(() => {
+        setCartItems((prevItems) =>
+          prevItems.map((ci) => ({ ...ci, isDisabled: true, isLoadingApi: false }))
+        );
+      })
+      .finally(() => setCartLoaded(true));
   }, []);
 
   const updateQty = (variantId: number, action: "inc" | "dec") => {
-    setCartItems(items =>
-      items.map(item => {
+    setCartItems((items) =>
+      items.map((item) => {
         if (item.id === variantId && !item.isDisabled) {
           const newQty =
             action === "inc"
@@ -103,12 +129,12 @@ export default function Cart() {
 
   const removeItem = (variantId: number) => {
     removeFromCart(variantId);
-    setCartItems(items => items.filter(item => item.id !== variantId));
-    setSelectedItems(items => items.filter(id => id !== variantId));
+    setCartItems((items) => items.filter((item) => item.id !== variantId));
+    setSelectedItems((items) => items.filter((id) => id !== variantId));
   };
 
   const subtotal = cartItems
-    .filter(item => selectedItems.includes(item.id) && !item.isDisabled)
+    .filter((item) => selectedItems.includes(item.id) && !item.isDisabled)
     .reduce((acc, item) => acc + Number(item.discount_price) * item.quantity, 0);
 
   const total = subtotal;
@@ -131,12 +157,14 @@ export default function Cart() {
             <p className="text-gray-500 text-center py-10">Your cart is empty 🛒</p>
           ) : (
             <div className="space-y-4">
-              {cartItems.map(item => {
-                const imageSrc = item.images?.[0] || item.fallbackImage || "/placeholder.png";
+              {cartItems.map((item) => {
+                const imageSrc = item.fallbackImage || "/placeholder.png";
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-center justify-between border-b pb-3 ${item.isDisabled ? "opacity-50" : ""}`}
+                    className={`flex items-center justify-between border-b pb-3 ${
+                      item.isDisabled ? "opacity-50" : ""
+                    }`}
                   >
                     <div className="flex items-center gap-4">
                       <input
@@ -144,9 +172,9 @@ export default function Cart() {
                         checked={selectedItems.includes(item.id)}
                         disabled={item.isDisabled || item.isLoadingApi}
                         onChange={() =>
-                          setSelectedItems(prev =>
+                          setSelectedItems((prev) =>
                             prev.includes(item.id)
-                              ? prev.filter(id => id !== item.id)
+                              ? prev.filter((id) => id !== item.id)
                               : [...prev, item.id]
                           )
                         }
@@ -169,22 +197,39 @@ export default function Cart() {
                       </Link>
                       <div>
                         <Link href={`/product/${item.slug}`}>
-                          <h3 className="font-medium cursor-pointer hover:underline">{item.name || item.skuLocal}</h3>
+                          <h3 className="font-medium cursor-pointer hover:underline">
+                            {item.name || item.skuLocal}
+                          </h3>
                         </Link>
-                        <p className="text-sm text-gray-600">SKU: {item.skuLocal}</p>
+
+                        <p className="text-sm text-gray-600">
+                          SKU:{" "}
+                          {item.isLoadingApi ? (
+                            <span className="bg-gray-200 rounded w-24 h-3 inline-block animate-pulse" />
+                          ) : (
+                            item.sku || item.skuLocal || "Unknown SKU"
+                          )}
+                        </p>
+
                         <p className="text-sm text-gray-500">
-                          {item.isLoadingApi
-                            ? <span className="bg-gray-200 rounded w-40 h-3 inline-block animate-pulse" />
-                            : item.attributes.length > 0
-                              ? item.attributes.map(a => `${a.attribute_name}: ${a.attribute_value}`).join(", ")
-                              : "No attributes"}
+                          {item.isLoadingApi ? (
+                            <span className="bg-gray-200 rounded w-40 h-3 inline-block animate-pulse" />
+                          ) : (
+                            "No attributes"
+                          )}
                         </p>
+
                         <p className="text-orange-600 font-semibold">
-                          {item.isLoadingApi
-                            ? <span className="bg-gray-200 rounded w-16 h-4 inline-block animate-pulse" />
-                            : `৳ ${Number(item.discount_price)}`}
+                          {item.isLoadingApi ? (
+                            <span className="bg-gray-200 rounded w-16 h-4 inline-block animate-pulse" />
+                          ) : (
+                            `৳ ${Number(item.discount_price)}`
+                          )}
                         </p>
-                        {item.isDisabled && !item.isLoadingApi && <p className="text-red-500 text-xs">Product not available</p>}
+
+                        {item.isDisabled && !item.isLoadingApi && (
+                          <p className="text-red-500 text-xs">Product not available</p>
+                        )}
                       </div>
                     </div>
 
@@ -200,8 +245,18 @@ export default function Cart() {
                         <span className="px-4">{item.quantity}</span>
                         <button
                           onClick={() => updateQty(item.id, "inc")}
-                          className={`px-3 py-1 hover:bg-gray-100 ${item.quantity >= item.stock || item.isDisabled || item.isLoadingApi ? "cursor-not-allowed opacity-50" : ""}`}
-                          disabled={item.quantity >= item.stock || item.isDisabled || item.isLoadingApi}
+                          className={`px-3 py-1 hover:bg-gray-100 ${
+                            item.quantity >= item.stock ||
+                            item.isDisabled ||
+                            item.isLoadingApi
+                              ? "cursor-not-allowed opacity-50"
+                              : ""
+                          }`}
+                          disabled={
+                            item.quantity >= item.stock ||
+                            item.isDisabled ||
+                            item.isLoadingApi
+                          }
                         >
                           +
                         </button>
@@ -232,13 +287,16 @@ export default function Cart() {
             <span>৳ {total}</span>
           </div>
 
-          {/* Checkout Button */}
           <button
-            disabled={selectedItems.length === 0 || cartItems.some(item => item.isLoadingApi)}
+            disabled={
+              selectedItems.length === 0 || cartItems.some((item) => item.isLoadingApi)
+            }
             onClick={() => {
               const checkoutData = cartItems
-                .filter(item => selectedItems.includes(item.id) && !item.isDisabled)
-                .map(item => ({
+                .filter(
+                  (item) => selectedItems.includes(item.id) && !item.isDisabled
+                )
+                .map((item) => ({
                   id: item.id,
                   productId: item.product_id,
                   name: item.name || item.skuLocal || "Unknown Product",
@@ -246,22 +304,21 @@ export default function Cart() {
                   discount_price: Number(item.discount_price),
                   sku: item.skuLocal || "Unknown SKU",
                   slug: item.slug,
-                  // Ensure attributeIds is number[] to match CheckoutItem type.
-                  attributeIds: item.attributes
-                    ?.map(a => Number((a as any).attribute_id ?? (a as any).id ?? (a as any).attributeId ?? NaN))
-                    .filter(n => !Number.isNaN(n)) || [],
+                  attributeIds: [],
                 }));
 
               setCheckoutItems(checkoutData);
-              window.location.href = "/checkout"; // redirect to checkout page
+              window.location.href = "/checkout";
             }}
             className={`w-full mt-4 bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition ${
-              selectedItems.length === 0 || cartItems.some(item => item.isLoadingApi)
+              selectedItems.length === 0 || cartItems.some((item) => item.isLoadingApi)
                 ? "cursor-not-allowed bg-gray-300 hover:bg-gray-300"
                 : ""
             }`}
           >
-            {cartItems.some(item => item.isLoadingApi) ? "Loading products..." : "Proceed to Checkout"}
+            {cartItems.some((item) => item.isLoadingApi)
+              ? "Loading products..."
+              : "Proceed to Checkout"}
           </button>
         </div>
       </div>

@@ -334,14 +334,6 @@ export default function ProductClient({ product }: Props) {
                       return;
                     }
 
-                    const selectedAttributeIds = currentVariant.attributes
-                      .filter(
-                        (attr) =>
-                          selectedAttributes[attr.attribute_name] ===
-                          attr.attribute_value
-                      )
-                      .map((attr) => attr.attribute_value_id);
-
                     addToCart({
                       productId: product.id,
                       variantId: currentVariant.id,
@@ -349,8 +341,6 @@ export default function ProductClient({ product }: Props) {
                       name: product.name,
                       price: Number(currentVariant.discount_price),
                       image: mainImage,
-                      sku: currentVariant.sku,
-                      attributeIds: selectedAttributeIds,
                       slug: product.slug ?? "",
                     });
                   }}
