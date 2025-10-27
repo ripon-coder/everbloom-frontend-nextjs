@@ -4,6 +4,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FaTrash } from "react-icons/fa";
 import { getCart, removeFromCart } from "@/lib/cart";
 import { setCheckoutItems } from "@/lib/checkout";
@@ -41,6 +42,7 @@ interface VariantAPI {
 }
 
 export default function Cart() {
+  const router = useRouter();
   const [cartItems, setCartItems] = useState<
     (VariantAPI & {
       quantity: number;
@@ -67,7 +69,7 @@ export default function Cart() {
       id: item.variantId,
       product_id: 0,
       sku: "",
-      discount_price: item.price || 0,
+      discount_price: String(item.price || 0), // <-- convert to string
       sell_price: "0",
       stock: 1,
       weight: "0",
@@ -94,7 +96,8 @@ export default function Cart() {
     })
       .then((res) => res.json())
       .then((resData) => {
-        if (!resData.status || !resData.data) throw new Error("No variants found");
+        if (!resData.status || !resData.data)
+          throw new Error("No variants found");
         const variants: VariantAPI[] = resData.data;
 
         setCartItems((prevItems) =>
@@ -117,7 +120,11 @@ export default function Cart() {
       })
       .catch(() => {
         setCartItems((prevItems) =>
-          prevItems.map((ci) => ({ ...ci, isDisabled: true, isLoadingApi: false }))
+          prevItems.map((ci) => ({
+            ...ci,
+            isDisabled: true,
+            isLoadingApi: false,
+          }))
         );
       })
       .finally(() => setCartLoaded(true));
@@ -146,7 +153,10 @@ export default function Cart() {
 
   const subtotal = cartItems
     .filter((item) => selectedItems.includes(item.id) && !item.isDisabled)
-    .reduce((acc, item) => acc + Number(item.discount_price) * item.quantity, 0);
+    .reduce(
+      (acc, item) => acc + Number(item.discount_price) * item.quantity,
+      0
+    );
 
   const total = subtotal;
 
@@ -165,7 +175,9 @@ export default function Cart() {
           </div>
 
           {cartLoaded && cartItems.length === 0 ? (
-            <p className="text-gray-500 text-center py-10">Your cart is empty 🛒</p>
+            <p className="text-gray-500 text-center py-10">
+              Your cart is empty 🛒
+            </p>
           ) : (
             <div className="space-y-4">
               {cartItems.map((item) => {
@@ -227,7 +239,10 @@ export default function Cart() {
                             <span className="bg-gray-200 rounded w-40 h-3 inline-block animate-pulse" />
                           ) : item.attributes.length > 0 ? (
                             item.attributes
-                              .map((a) => `${a.attribute_name}: ${a.attribute_value}`)
+                              .map(
+                                (a) =>
+                                  `${a.attribute_name}: ${a.attribute_value}`
+                              )
                               .join(", ")
                           ) : (
                             "No attributes"
@@ -241,7 +256,9 @@ export default function Cart() {
                           )}
                         </p>
                         {item.isDisabled && !item.isLoadingApi && (
-                          <p className="text-red-500 text-xs">Product not available</p>
+                          <p className="text-red-500 text-xs">
+                            Product not available
+                          </p>
                         )}
                       </div>
                     </div>
@@ -302,7 +319,8 @@ export default function Cart() {
 
           <button
             disabled={
-              selectedItems.length === 0 || cartItems.some((item) => item.isLoadingApi)
+              selectedItems.length === 0 ||
+              cartItems.some((item) => item.isLoadingApi)
             }
             onClick={() => {
               const checkoutData = cartItems
@@ -310,21 +328,20 @@ export default function Cart() {
                   (item) => selectedItems.includes(item.id) && !item.isDisabled
                 )
                 .map((item) => ({
-                  id: item.id,
+                  variant_id: item.id,
                   productId: item.product_id,
                   name: item.name || item.skuLocal || "Unknown Product",
                   quantity: item.quantity,
-                  discount_price: Number(item.discount_price),
-                  sku: item.skuLocal || "Unknown SKU",
-                  slug: item.slug,
-                  attributeIds: item.attributes.map((a) => a.attribute_id),
                 }));
 
-              setCheckoutItems(checkoutData);
-              window.location.href = "/checkout";
+              setCheckoutItems(checkoutData); // save before redirect
+              const tokenExists = document.cookie.includes("token");
+              console.log(tokenExists);
+              router.push("/checkout");
             }}
             className={`w-full mt-4 bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition ${
-              selectedItems.length === 0 || cartItems.some((item) => item.isLoadingApi)
+              selectedItems.length === 0 ||
+              cartItems.some((item) => item.isLoadingApi)
                 ? "cursor-not-allowed bg-gray-300 hover:bg-gray-300"
                 : ""
             }`}

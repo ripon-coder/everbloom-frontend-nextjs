@@ -1,15 +1,49 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [login, setLogin] = useState(""); // email or phone
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/";
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log({ email, password });
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ login, password, remember }),
+      });
+
+      const result = await response.json();
+
+      if (!result.status) {
+        setError(result.message || "Invalid Credential");
+      } else {
+        setSuccess("Login Successful! Redirecting...");
+        // Redirect after short delay
+        setTimeout(() => {
+          window.location.href = redirectUrl;
+        }, 1500);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -18,19 +52,34 @@ export default function LoginPage() {
         <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
           Login to Your Account
         </h2>
+
+        {error && (
+          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded">
+            {success}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email */}
+          {/* Email or Phone */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+              Email or Phone
             </label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
               required
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-              placeholder="you@example.com"
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                error ? "border-red-500 ring-red-400" : ""
+              }`}
+              placeholder="you@example.com or 0123456789"
             />
           </div>
 
@@ -44,13 +93,23 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                error ? "border-red-500 ring-red-400" : ""
+              }`}
               placeholder="Enter your password"
             />
           </div>
 
-          {/* Forgot Password */}
-          <div className="text-right">
+          {/* Remember Me */}
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={() => setRemember(!remember)}
+              />
+              Remember Me
+            </label>
             <a href="#" className="text-sm text-amber-500 hover:underline">
               Forgot Password?
             </a>
@@ -59,37 +118,12 @@ export default function LoginPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-amber-500 text-white py-3 rounded-lg font-medium hover:bg-amber-600 transition"
+            disabled={loading}
+            className="w-full bg-amber-500 text-white py-3 rounded-lg font-medium hover:bg-amber-600 transition disabled:opacity-50"
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
-
-        {/* Divider */}
-        <div className="flex items-center my-4">
-          <hr className="flex-1 border-gray-300" />
-          <span className="mx-2 text-gray-400 text-sm">or</span>
-          <hr className="flex-1 border-gray-300" />
-        </div>
-
-        {/* Social Login Buttons */}
-        <div className="flex flex-col gap-3">
-          <button className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2 hover:bg-gray-100 transition">
-            <img src="/google-icon.svg" alt="Google" className="w-5 h-5" />
-            Login with Google
-          </button>
-          <button className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2 hover:bg-gray-100 transition">
-            <img src="/facebook-icon.svg" alt="Facebook" className="w-5 h-5" />
-            Login with Facebook
-          </button>
-        </div>
-
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Don’t have an account?{" "}
-          <a href="#" className="text-amber-500 hover:underline">
-            Sign Up
-          </a>
-        </p>
       </div>
     </div>
   );

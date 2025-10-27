@@ -35,7 +35,11 @@ export default function LeftSidebar() {
       title: "Orders",
       items: [
         { name: "My Orders", icon: <FiShoppingBag />, url: "/my-orders" },
-        { name: "Payment Methods", icon: <FiCreditCard />, url: "/payment-methods" },
+        {
+          name: "Payment Methods",
+          icon: <FiCreditCard />,
+          url: "/payment-methods",
+        },
       ],
     },
     {
@@ -44,14 +48,29 @@ export default function LeftSidebar() {
     },
     {
       title: "Support",
-      items: [{ name: "Messages", icon: <FiMessageCircle />, url: "/messages" }],
+      items: [
+        { name: "Messages", icon: <FiMessageCircle />, url: "/messages" },
+      ],
     },
   ];
 
-  const handleMenuClick = (item: typeof menuSections[0]["items"][0]) => {
+  const handleMenuClick = (item: (typeof menuSections)[0]["items"][0]) => {
     setActiveMenu(item.name);
     router.push(item.url);
     setIsOpen(false); // close sidebar on mobile
+  };
+
+  const handleLogout = async () => {
+    try {
+      const res = await fetch("/api/logout", { method: "POST" });
+      const data = await res.json();
+
+      if (data.status) {
+        router.push("/login"); // redirect to login page
+      }
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
   };
 
   return (
@@ -63,7 +82,11 @@ export default function LeftSidebar() {
       >
         <h1 className="font-bold text-md text-amber-600 mx-auto">User Panel</h1>
         <button aria-label="Toggle user sidebar">
-          {isOpen ? <FiChevronUp className="text-amber-600" size={24} /> : <FiChevronDown className="text-amber-600" size={24} />}
+          {isOpen ? (
+            <FiChevronUp className="text-amber-600" size={24} />
+          ) : (
+            <FiChevronDown className="text-amber-600" size={24} />
+          )}
         </button>
       </div>
 
@@ -80,14 +103,18 @@ export default function LeftSidebar() {
           <nav className="space-y-6">
             {menuSections.map((section) => (
               <div key={section.title}>
-                <p className="text-xs font-semibold text-gray-400 uppercase mb-2">{section.title}</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase mb-2">
+                  {section.title}
+                </p>
                 <ul className="space-y-1">
                   {section.items.map((item) => (
                     <li key={item.name}>
                       <button
                         onClick={() => handleMenuClick(item)}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-500 transition ${
-                          activeMenu === item.name ? "bg-amber-50 text-amber-600 font-medium" : ""
+                          activeMenu === item.name
+                            ? "bg-amber-50 text-amber-600 font-medium"
+                            : ""
                         }`}
                       >
                         {item.icon} {item.name}
@@ -102,7 +129,7 @@ export default function LeftSidebar() {
           {/* Logout */}
           <div>
             <button
-              onClick={() => router.push("/logout")}
+              onClick= {handleLogout}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-500 border border-red-500 hover:bg-red-50 transition"
             >
               <FiLogOut /> Logout
@@ -112,7 +139,12 @@ export default function LeftSidebar() {
       </aside>
 
       {/* Overlay when sidebar is open on mobile */}
-      {isOpen && <div className="fixed inset-0 bg-black opacity-25 z-40 md:hidden" onClick={() => setIsOpen(false)}></div>}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black opacity-25 z-40 md:hidden"
+          onClick={() => setIsOpen(false)}
+        ></div>
+      )}
     </>
   );
 }

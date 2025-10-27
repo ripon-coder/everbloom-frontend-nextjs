@@ -1,77 +1,54 @@
-// checkout.ts
-
-import toast from "react-hot-toast";
-
+// lib/checkout.ts
 export interface CheckoutItem {
-  id: number;              // Variant ID
-  productId: number;       // Product ID
+  variant_id: number;
+  productId: number;
   name: string;
   quantity: number;
-  discount_price: number;
-  sku: string;
-  slug: string;
-  attributeIds?: number[];
 }
 
-/**
- * Safely parse checkout items from localStorage
- */
-function safeParseCheckout(): CheckoutItem[] {
+const CHECKOUT_KEY = "checkout";
+
+// Get all checkout items from localStorage
+export function getCart(): CheckoutItem[] {
   try {
-    const stored = localStorage.getItem("checkout");
+    const stored = localStorage.getItem(CHECKOUT_KEY);
     if (!stored) return [];
-
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) throw new Error("Invalid checkout format");
-
-    const validItems = parsed.filter(
-      (item: any) =>
-        item &&
-        typeof item.id === "number" &&
-        typeof item.productId === "number" &&
-        typeof item.name === "string" &&
-        typeof item.quantity === "number" &&
-        typeof item.discount_price === "number" &&
-        typeof item.sku === "string" &&
-        typeof item.slug === "string"
-    );
-
-    if (validItems.length !== parsed.length) {
-      console.warn("Some invalid checkout items were ignored.", parsed, validItems);
-    }
-
-    return validItems;
-  } catch (error) {
-    console.warn("Corrupted checkout data detected, recovering what we can.", error);
+    return JSON.parse(stored);
+  } catch {
     return [];
   }
 }
 
-/**
- * Save checkout items to localStorage
- */
+// Save checkout items to localStorage (overwrite previous data)
 export function setCheckoutItems(items: CheckoutItem[]) {
   try {
-    localStorage.setItem("checkout", JSON.stringify(items));
+    localStorage.setItem(CHECKOUT_KEY, JSON.stringify(items));
   } catch (error) {
     console.error("Failed to save checkout items:", error);
   }
 }
 
-/**
- * Get all checkout items from localStorage
- */
-export function getCart(): CheckoutItem[] {
-  return safeParseCheckout();
+// Add a single item to checkout
+export function addToCheckout(item: CheckoutItem) {
+  const cart = getCart();
+  const exists = cart.find((i) => i.variant_id === item.variant_id);
+  const updated = exists
+    ? cart.map((i) =>
+        i.variant_id === item.variant_id
+          ? { ...i, quantity: i.quantity + item.quantity }
+          : i
+      )
+    : [...cart, item];
+  setCheckoutItems(updated);
 }
 
-/**
- * Clear checkout storage
- */
+// Remove a single item from checkout
+export function removeFromCheckout(variant_id: number) {
+  const cart = getCart().filter((i) => i.variant_id !== variant_id);
+  setCheckoutItems(cart);
+}
+
+// Clear all checkout data explicitly
 export function clearCheckout() {
-  try {
-    localStorage.removeItem("checkout");
-  } catch (error) {
-    console.error("Failed to clear checkout:", error);
-  }
+  localStorage.removeItem(CHECKOUT_KEY);
 }
