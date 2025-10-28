@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin,Trash } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Address {
@@ -270,7 +270,7 @@ export default function AddressBookPage() {
                   onClick={() => setDeleteConfirm(addr)}
                   className="text-red-500 border border-red-500 px-3 py-1 rounded-md hover:bg-red-50 transition"
                 >
-                  Delete
+                  <Trash className="cursor-pointer hover:text-red-500"/>
                 </button>
               </div>
             ))}
