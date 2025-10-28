@@ -6,32 +6,22 @@ import { getCart, setCheckoutItems, CheckoutItem } from "@/lib/checkout";
 interface Variant {
   id: number;
   product_id: number;
-  buy_price?: string | null;
   sell_price: string;
   discount_price: any;
   stock: number;
   weight: string;
   status: string;
   images?: string[];
-  attributes: {
-    id: number;
-    product_variant_id: number;
-    attribute_id: number;
-    attribute_value_id: number;
-    attribute_name: string;
-    is_image: number;
-    attribute_value: string;
-  }[];
+  attributes: any[];
 }
 
 interface CheckoutVariant extends Variant {
   quantity: number;
-  fallbackImage?: string;
   name?: string;
-  slug?: string;
+  fallbackImage?: string;
+  key: string;
   isDisabled?: boolean;
   isLoadingPrice?: boolean;
-  key: string;
 }
 
 interface District {
@@ -51,18 +41,11 @@ interface Address {
 }
 
 export default function CheckoutPage() {
-  const [checkoutItems, setCheckoutItemsState] = useState<CheckoutVariant[]>(
-    []
-  );
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">(
-    "cod"
-  );
+  const [checkoutItems, setCheckoutItemsState] = useState<CheckoutVariant[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">("cod");
 
-  // Address states
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">(
-    "new"
-  );
+  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">("new");
   const [addressForm, setAddressForm] = useState({
     name: "",
     phone: "",
@@ -71,15 +54,19 @@ export default function CheckoutPage() {
     address: "",
   });
 
-  // Loading states
   const [districts, setDistricts] = useState<District[]>([]);
   const [districtLoading, setDistrictLoading] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
 
-  // Coupon states
   const [couponCode, setCouponCode] = useState("");
-  const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponMessage, setCouponMessage] = useState("");
+  const [checkoutTotals, setCheckoutTotals] = useState({
+    subtotal: 0,
+    shipping: 0,
+    total: 0,
+    coupon_discount: 0,
+    flash_discount: 0,
+  });
 
   // Fetch district list
   useEffect(() => {
@@ -88,9 +75,7 @@ export default function CheckoutPage() {
       try {
         const res = await fetch("/api/district-list");
         const data = await res.json();
-        if (res.ok && data) {
-          setDistricts(data);
-        }
+        if (res.ok && data) setDistricts(data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -143,7 +128,7 @@ export default function CheckoutPage() {
     }
   }, [selectedAddressId, savedAddresses]);
 
-  // Load checkout items
+  // Load checkout items and initial prices from variant API
   useEffect(() => {
     const localCart = getCart();
     if (!localCart || localCart.length === 0) return;
@@ -165,6 +150,7 @@ export default function CheckoutPage() {
       isLoadingPrice: true,
       key: `${item.variant_id}-${index}`,
     }));
+
     setCheckoutItemsState(placeholders);
 
     const variantIds = localCart.map((item) => item.variant_id);
@@ -176,39 +162,45 @@ export default function CheckoutPage() {
     })
       .then((res) => res.json())
       .then((resData) => {
-        if (!resData.status || !resData.data)
-          throw new Error("No variants found");
+        if (!resData.status || !resData.data) throw new Error("No variants found");
 
         const variants: Variant[] = resData.data;
-        const updatedItems: CheckoutVariant[] = placeholders.map(
-          (ci, index) => {
-            const variant = variants.find((v) => v.id === ci.id);
-            if (variant) {
-              return {
-                ...ci,
-                ...variant,
-                discount_price: variant.discount_price || "0",
-                sell_price: variant.sell_price || "0",
-                quantity: ci.quantity,
-                fallbackImage: variant.images?.[0] || "",
-                isDisabled: variant.stock <= 0,
-                isLoadingPrice: false,
-                key: `${ci.id}-${index}`,
-              };
-            }
+        const updatedItems: CheckoutVariant[] = placeholders.map((ci, index) => {
+          const variant = variants.find((v) => v.id === ci.id);
+          if (variant) {
             return {
               ...ci,
-              isDisabled: true,
+              ...variant,
+              discount_price: variant.discount_price || variant.sell_price,
+              sell_price: variant.sell_price,
+              fallbackImage: variant.images?.[0] || "",
+              isDisabled: variant.stock <= 0,
               isLoadingPrice: false,
               key: `${ci.id}-${index}`,
             };
           }
-        );
+          return { ...ci, isDisabled: true, isLoadingPrice: false, key: `${ci.id}-${index}` };
+        });
 
         setCheckoutItemsState(updatedItems);
 
+        // 🔹 Compute initial subtotal locally
+        const initialSubtotal = updatedItems.reduce(
+          (sum, item) => sum + Number(item.discount_price) * item.quantity,
+          0
+        );
+
+        setCheckoutTotals({
+          subtotal: initialSubtotal,
+          shipping: 0, // initial shipping 0
+          total: initialSubtotal,
+          coupon_discount: 0,
+          flash_discount: 0,
+        });
+
+        // Save items to localStorage
         const itemsToSave: CheckoutItem[] = updatedItems
-          .filter((item) => !item.isDisabled && !item.isLoadingPrice)
+          .filter((item) => !item.isDisabled)
           .map((item) => ({
             variant_id: item.id,
             productId: item.product_id,
@@ -216,61 +208,78 @@ export default function CheckoutPage() {
             quantity: item.quantity,
             discount_price: Number(item.discount_price),
           }));
-
         setCheckoutItems(itemsToSave);
       })
-      .catch(() => {
-        setCheckoutItemsState((prev) =>
-          prev.map((ci, index) => ({
-            ...ci,
-            isDisabled: true,
-            isLoadingPrice: false,
-            key: `${ci.id}-${index}`,
-          }))
-        );
-      });
+      .catch((err) => console.error(err));
   }, []);
 
-  const applyCoupon = async () => {
-    if (!couponCode) return setCouponMessage("Please enter a coupon code.");
+  // 🔁 Recalculate totals using backend (shipping/coupons)
+  const recalculateCheckout = async (
+    items = checkoutItems,
+    coupon = couponCode,
+    districtName = addressForm.district
+  ) => {
+    const district = districts.find(
+      (d) => d.name.toLowerCase() === districtName.toLowerCase()
+    );
+    if (!district) return;
+
+    const product_list = items.map((item) => ({
+      product_id: String(item.product_id),
+      variant_id: String(item.id),
+      quantity: String(item.quantity),
+      flash_sale: "",
+    }));
 
     try {
-      const res = await fetch("/api/validate-coupon", {
+      const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponCode }),
+        body: JSON.stringify({
+          product_list,
+          coupon_code: coupon,
+          district_id: district.id,
+        }),
       });
-      const data = await res.json();
 
-      if (data.valid) {
-        setCouponDiscount(data.discount);
-        setCouponMessage(`Coupon applied! Discount: ৳${data.discount}`);
+      const data = await res.json();
+      if (data.status && data.data) {
+        const d = data.data;
+        setCheckoutTotals({
+          subtotal: d.subtotal || 0,
+          shipping: d.shipping_amount || 0,
+          total: d.total_amount || 0,
+          coupon_discount: d.coupon_discount_amount || 0,
+          flash_discount: d.flash_discount_amount || 0,
+        });
+        setCouponMessage(`✅ Checkout updated (${coupon || "no coupon"})`);
       } else {
-        setCouponDiscount(0);
-        setCouponMessage("Invalid coupon code.");
+        setCouponMessage("Failed to update totals");
       }
-    } catch {
-      setCouponDiscount(0);
-      setCouponMessage("Error validating coupon.");
+    } catch (err) {
+      console.error(err);
+      setCouponMessage("Error calculating checkout");
     }
   };
 
-  const subtotal = checkoutItems
-    .filter((item) => !item.isDisabled)
-    .reduce(
-      (acc, item) => acc + Number(item.discount_price) * item.quantity,
-      0
-    );
+  // Apply coupon
+  const applyCoupon = async () => {
+    if (!couponCode) return setCouponMessage("Enter coupon code");
+    await recalculateCheckout(checkoutItems, couponCode, addressForm.district);
+  };
 
-  const deliveryCharge =
-    addressForm.district.toLowerCase() === "dhaka" ? 80 : 120;
-
-  const total = subtotal + deliveryCharge - couponDiscount;
+  // Recalculate when district changes
+  useEffect(() => {
+    if (addressForm.district && checkoutItems.length > 0) {
+      recalculateCheckout(checkoutItems, couponCode, addressForm.district);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addressForm.district]);
 
   return (
     <div className="bg-gray-100 min-h-screen p-4">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
-        {/* Left - Shipping */}
+        {/* Left Section */}
         <div className="md:w-2/3 bg-white p-6 rounded-lg shadow space-y-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold">Shipping Information</h2>
@@ -280,7 +289,6 @@ export default function CheckoutPage() {
           </div>
 
           <div className="space-y-3">
-            {/* Address Book Dropdown */}
             <select
               value={selectedAddressId}
               onChange={(e) =>
@@ -323,7 +331,6 @@ export default function CheckoutPage() {
               }
               className="border p-3 rounded w-full"
             />
-
             <textarea
               placeholder="Address"
               value={addressForm.address}
@@ -333,7 +340,6 @@ export default function CheckoutPage() {
               className="border p-3 rounded w-full"
               rows={3}
             />
-
             <input
               type="text"
               placeholder="Zone"
@@ -344,7 +350,6 @@ export default function CheckoutPage() {
               className="border p-3 rounded w-full"
             />
 
-            {/* District Dropdown */}
             <select
               value={addressForm.district}
               onChange={(e) =>
@@ -416,23 +421,21 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Right - Order Summary */}
+        {/* Right Summary */}
         <div className="md:w-1/3 bg-white p-6 rounded-lg shadow flex flex-col justify-between">
           <div>
             <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
             <div className="space-y-3 text-sm">
               {checkoutItems.map((item) => (
-                <div
-                  key={item.key}
-                  className="flex justify-between items-center"
-                >
+                <div key={item.key} className="flex justify-between items-center">
                   <span>
-                    {item.name} ({item.discount_price} x{item.quantity})
+                    {item.name} ({item.quantity}x)
                   </span>
                   <span>
                     ৳{" "}
-                    {Number(
-                      item.discount_price * item.quantity
+                    {(
+                      Number(item.discount_price || item.sell_price) *
+                      Number(item.quantity)
                     ).toLocaleString()}
                   </span>
                 </div>
@@ -442,41 +445,48 @@ export default function CheckoutPage() {
             <div className="border-t mt-4 pt-3 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>৳ {subtotal.toLocaleString()}</span>
+                <span>৳ {checkoutTotals.subtotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span>Delivery</span>
-                <span>৳ {deliveryCharge.toLocaleString()}</span>
+                <span>৳ {checkoutTotals.shipping.toLocaleString()}</span>
               </div>
-              {couponDiscount > 0 && (
+              {checkoutTotals.coupon_discount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Coupon Discount</span>
-                  <span>-৳ {couponDiscount.toLocaleString()}</span>
+                  <span>-৳ {checkoutTotals.coupon_discount.toLocaleString()}</span>
+                </div>
+              )}
+              {checkoutTotals.flash_discount > 0 && (
+                <div className="flex justify-between text-blue-600">
+                  <span>Flash Discount</span>
+                  <span>-৳ {checkoutTotals.flash_discount.toLocaleString()}</span>
                 </div>
               )}
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
-                <span>৳ {total.toLocaleString()}</span>
+                <span>৳ {checkoutTotals.total.toLocaleString()}</span>
               </div>
             </div>
 
             <div className="hidden md:block mt-6">
               <button className="w-full bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition text-lg">
-                Place Order ৳ {total.toLocaleString()}
+                Place Order ৳ {checkoutTotals.total.toLocaleString()}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile Place Order Button fixed at bottom */}
+      {/* Mobile Order Button */}
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-white p-4 shadow-t flex justify-between items-center z-50">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600 font-semibold">Total</span>
           <span className="text-lg font-semibold">
-            ৳ {total.toLocaleString()}
+            ৳ {checkoutTotals.total.toLocaleString()}
           </span>
         </div>
+        
         <button className="bg-orange-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-orange-600 transition">
           Place Order
         </button>
