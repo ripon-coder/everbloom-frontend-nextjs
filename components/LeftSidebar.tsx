@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   FiUser,
   FiShoppingBag,
@@ -18,8 +18,8 @@ import {
 
 export default function LeftSidebar() {
   const router = useRouter();
+  const pathname = usePathname(); // ✅ Detect current route
   const [isOpen, setIsOpen] = useState(false);
-  const [activeMenu, setActiveMenu] = useState("Profile");
 
   const menuSections = [
     {
@@ -35,11 +35,7 @@ export default function LeftSidebar() {
       title: "Orders",
       items: [
         { name: "My Orders", icon: <FiShoppingBag />, url: "/my-orders" },
-        {
-          name: "Payment Methods",
-          icon: <FiCreditCard />,
-          url: "/payment-methods",
-        },
+        { name: "Payment Methods", icon: <FiCreditCard />, url: "/payment-methods" },
       ],
     },
     {
@@ -48,16 +44,13 @@ export default function LeftSidebar() {
     },
     {
       title: "Support",
-      items: [
-        { name: "Messages", icon: <FiMessageCircle />, url: "/messages" },
-      ],
+      items: [{ name: "Messages", icon: <FiMessageCircle />, url: "/messages" }],
     },
   ];
 
-  const handleMenuClick = (item: (typeof menuSections)[0]["items"][0]) => {
-    setActiveMenu(item.name);
-    router.push(item.url);
-    setIsOpen(false); // close sidebar on mobile
+  const handleMenuClick = (url: string) => {
+    router.push(url);
+    setIsOpen(false);
   };
 
   const handleLogout = async () => {
@@ -66,7 +59,7 @@ export default function LeftSidebar() {
       const data = await res.json();
 
       if (data.status) {
-        router.push("/login"); // redirect to login page
+        router.push("/login");
       }
     } catch (err) {
       console.error("Logout failed", err);
@@ -75,7 +68,7 @@ export default function LeftSidebar() {
 
   return (
     <>
-      {/* Mobile toggle button */}
+      {/* Mobile toggle */}
       <div
         onClick={() => setIsOpen(!isOpen)}
         className="md:hidden p-2 bg-white border-b flex items-center justify-between cursor-pointer"
@@ -107,30 +100,30 @@ export default function LeftSidebar() {
                   {section.title}
                 </p>
                 <ul className="space-y-1">
-                  {section.items.map((item) => (
-                    <li key={item.name}>
-                      <button
-                        onClick={() => handleMenuClick(item)}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-500 transition ${
-                          activeMenu === item.name
-                            ? "bg-amber-50 text-amber-600 font-medium"
-                            : ""
-                        }`}
-                      >
-                        {item.icon} {item.name}
-                      </button>
-                    </li>
-                  ))}
+                  {section.items.map((item) => {
+                    const isActive = pathname === item.url; // ✅ Active check
+                    return (
+                      <li key={item.name}>
+                        <button
+                          onClick={() => handleMenuClick(item.url)}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-500 transition ${
+                            isActive ? "bg-amber-50 text-amber-600 font-medium" : ""
+                          }`}
+                        >
+                          {item.icon} {item.name}
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
           </nav>
 
-          {/* Logout */}
           <div>
             <button
-              onClick= {handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-500 border border-red-500 hover:bg-red-50 transition"
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-500 border border-red-500 cursor-pointer hover:bg-red-50 transition"
             >
               <FiLogOut /> Logout
             </button>
@@ -138,7 +131,7 @@ export default function LeftSidebar() {
         </div>
       </aside>
 
-      {/* Overlay when sidebar is open on mobile */}
+      {/* Mobile overlay */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black opacity-25 z-40 md:hidden"

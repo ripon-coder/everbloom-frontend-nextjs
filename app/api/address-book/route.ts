@@ -21,6 +21,7 @@ export async function GET(request: Request) {
 
     // Call external API with Bearer token
     const response = await fetch(apiUrl.toString(), {
+      next: { revalidate: 120 },
       method: "GET",
       headers: {
         "Content-Type": "application/json",

@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getCart, setCheckoutItems, CheckoutItem } from "@/lib/checkout";
 
@@ -34,32 +34,35 @@ interface CheckoutVariant extends Variant {
   key: string;
 }
 
+interface District {
+  id: number;
+  name: string;
+  delivery_charge?: number;
+  information?: string | null;
+}
+
+interface Address {
+  id: number;
+  name: string;
+  phone: string;
+  district: string;
+  zone: string;
+  address: string;
+}
+
 export default function CheckoutPage() {
-  const [checkoutItems, setCheckoutItemsState] = useState<CheckoutVariant[]>([]);
-  const [location, setLocation] = useState<"inside" | "outside">("inside");
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">("cod");
+  const [checkoutItems, setCheckoutItemsState] = useState<CheckoutVariant[]>(
+    []
+  );
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">(
+    "cod"
+  );
 
   // Address states
-  const [savedAddresses, setSavedAddresses] = useState<
-    {
-      id: number;
-      name: string;
-      phone: string;
-      district: string;
-      zone: string;
-      address: string;
-    }[]
-  >([
-    {
-      id: 1,
-      name: "John Doe",
-      phone: "017XXXXXXXX",
-      district: "Dhaka",
-      zone: "Gulshan",
-      address: "House 12, Road 5",
-    },
-  ]);
-  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">("new");
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">(
+    "new"
+  );
   const [addressForm, setAddressForm] = useState({
     name: "",
     phone: "",
@@ -68,23 +71,79 @@ export default function CheckoutPage() {
     address: "",
   });
 
-  // District options
-  const districts = ["Dhaka", "Chittagong", "Khulna", "Rajshahi", "Sylhet", "Barishal", "Rangpur", "Mymensingh"];
+  // Loading states
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [districtLoading, setDistrictLoading] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(false);
 
   // Coupon states
   const [couponCode, setCouponCode] = useState("");
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponMessage, setCouponMessage] = useState("");
 
+  // Fetch district list
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      setDistrictLoading(true);
+      try {
+        const res = await fetch("/api/district-list");
+        const data = await res.json();
+        if (res.ok && data) {
+          setDistricts(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setDistrictLoading(false);
+      }
+    };
+    fetchDistricts();
+  }, []);
+
+  // Fetch address book
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      setAddressLoading(true);
+      try {
+        const res = await fetch("/api/address-book");
+        const data = await res.json();
+        if (data.status && data.data) {
+          const formatted: Address[] = data.data.map((addr: any) => ({
+            id: addr.id,
+            name: addr.name,
+            phone: addr.phone_number,
+            district: addr.district?.name || "",
+            zone: addr.zone,
+            address: addr.address,
+          }));
+          setSavedAddresses(formatted);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setAddressLoading(false);
+      }
+    };
+    fetchAddresses();
+  }, []);
+
+  // Update form when address selected
   useEffect(() => {
     if (selectedAddressId === "new") {
-      setAddressForm({ name: "", phone: "", district: "", zone: "", address: "" });
+      setAddressForm({
+        name: "",
+        phone: "",
+        district: "",
+        zone: "",
+        address: "",
+      });
     } else {
       const addr = savedAddresses.find((a) => a.id === selectedAddressId);
       if (addr) setAddressForm(addr);
     }
-  }, [selectedAddressId]);
+  }, [selectedAddressId, savedAddresses]);
 
+  // Load checkout items
   useEffect(() => {
     const localCart = getCart();
     if (!localCart || localCart.length === 0) return;
@@ -117,32 +176,34 @@ export default function CheckoutPage() {
     })
       .then((res) => res.json())
       .then((resData) => {
-        if (!resData.status || !resData.data) throw new Error("No variants found");
+        if (!resData.status || !resData.data)
+          throw new Error("No variants found");
 
         const variants: Variant[] = resData.data;
-
-        const updatedItems: CheckoutVariant[] = placeholders.map((ci, index) => {
-          const variant = variants.find((v) => v.id === ci.id);
-          if (variant) {
+        const updatedItems: CheckoutVariant[] = placeholders.map(
+          (ci, index) => {
+            const variant = variants.find((v) => v.id === ci.id);
+            if (variant) {
+              return {
+                ...ci,
+                ...variant,
+                discount_price: variant.discount_price || "0",
+                sell_price: variant.sell_price || "0",
+                quantity: ci.quantity,
+                fallbackImage: variant.images?.[0] || "",
+                isDisabled: variant.stock <= 0,
+                isLoadingPrice: false,
+                key: `${ci.id}-${index}`,
+              };
+            }
             return {
               ...ci,
-              ...variant,
-              discount_price: variant.discount_price || "0",
-              sell_price: variant.sell_price || "0",
-              quantity: ci.quantity,
-              fallbackImage: variant.images?.[0] || "",
-              isDisabled: variant.stock <= 0,
+              isDisabled: true,
               isLoadingPrice: false,
               key: `${ci.id}-${index}`,
             };
           }
-          return {
-            ...ci,
-            isDisabled: true,
-            isLoadingPrice: false,
-            key: `${ci.id}-${index}`,
-          };
-        });
+        );
 
         setCheckoutItemsState(updatedItems);
 
@@ -188,7 +249,7 @@ export default function CheckoutPage() {
         setCouponDiscount(0);
         setCouponMessage("Invalid coupon code.");
       }
-    } catch (err) {
+    } catch {
       setCouponDiscount(0);
       setCouponMessage("Error validating coupon.");
     }
@@ -196,9 +257,14 @@ export default function CheckoutPage() {
 
   const subtotal = checkoutItems
     .filter((item) => !item.isDisabled)
-    .reduce((acc, item) => acc + Number(item.discount_price) * item.quantity, 0);
+    .reduce(
+      (acc, item) => acc + Number(item.discount_price) * item.quantity,
+      0
+    );
 
-  const deliveryCharge = addressForm.district.toLowerCase() === "dhaka" ? 80 : 120;
+  const deliveryCharge =
+    addressForm.district.toLowerCase() === "dhaka" ? 80 : 120;
+
   const total = subtotal + deliveryCharge - couponDiscount;
 
   return (
@@ -206,66 +272,96 @@ export default function CheckoutPage() {
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
         {/* Left - Shipping */}
         <div className="md:w-2/3 bg-white p-6 rounded-lg shadow space-y-6">
-          <h2 className="text-2xl font-semibold mb-4">Shipping Information</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold">Shipping Information</h2>
+            <button className="text-sm px-2 py-1 bg-amber-500 text-white rounded hover:bg-amber-600 transition cursor-pointer">
+              <Link href="/address-book">Address Book</Link>
+            </button>
+          </div>
 
-          {/* Address Form */}
           <div className="space-y-3">
+            {/* Address Book Dropdown */}
             <select
               value={selectedAddressId}
-              onChange={(e) => setSelectedAddressId(e.target.value === "new" ? "new" : Number(e.target.value))}
+              onChange={(e) =>
+                setSelectedAddressId(
+                  e.target.value === "new" ? "new" : Number(e.target.value)
+                )
+              }
               className="border p-3 rounded w-full text-sm"
+              disabled={addressLoading}
             >
-              <option value="new">Enter New Address</option>
-              {savedAddresses.map((addr) => (
-                <option key={addr.id} value={addr.id}>
-                  {addr.name}, {addr.district}, {addr.zone}
-                </option>
-              ))}
+              {addressLoading ? (
+                <option>Loading addresses...</option>
+              ) : (
+                <>
+                  <option value="new">Enter New Address</option>
+                  {savedAddresses.map((addr) => (
+                    <option key={addr.id} value={addr.id}>
+                      {addr.name}, {addr.zone}, {addr.district}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
 
             <input
               type="text"
               placeholder="Name"
               value={addressForm.name}
-              onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
+              onChange={(e) =>
+                setAddressForm({ ...addressForm, name: e.target.value })
+              }
               className="border p-3 rounded w-full"
             />
             <input
               type="text"
               placeholder="Phone Number"
               value={addressForm.phone}
-              onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+              onChange={(e) =>
+                setAddressForm({ ...addressForm, phone: e.target.value })
+              }
               className="border p-3 rounded w-full"
             />
 
-            {/* District dropdown */}
-            <select
-              value={addressForm.district}
-              onChange={(e) => setAddressForm({ ...addressForm, district: e.target.value })}
+            <textarea
+              placeholder="Address"
+              value={addressForm.address}
+              onChange={(e) =>
+                setAddressForm({ ...addressForm, address: e.target.value })
+              }
               className="border p-3 rounded w-full"
-            >
-              <option value="">Select District</option>
-              {districts.map((district) => (
-                <option key={district} value={district}>
-                  {district}
-                </option>
-              ))}
-            </select>
+              rows={3}
+            />
 
             <input
               type="text"
               placeholder="Zone"
               value={addressForm.zone}
-              onChange={(e) => setAddressForm({ ...addressForm, zone: e.target.value })}
+              onChange={(e) =>
+                setAddressForm({ ...addressForm, zone: e.target.value })
+              }
               className="border p-3 rounded w-full"
             />
-            <textarea
-              placeholder="Address"
-              value={addressForm.address}
-              onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })}
+
+            {/* District Dropdown */}
+            <select
+              value={addressForm.district}
+              onChange={(e) =>
+                setAddressForm({ ...addressForm, district: e.target.value })
+              }
               className="border p-3 rounded w-full"
-              rows={3}
-            />
+              disabled={districtLoading}
+            >
+              <option value="">
+                {districtLoading ? "Loading districts..." : "Select District"}
+              </option>
+              {districts.map((district) => (
+                <option key={district.id} value={district.name}>
+                  {district.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Coupon */}
@@ -285,7 +381,9 @@ export default function CheckoutPage() {
                 Apply
               </button>
             </div>
-            {couponMessage && <p className="text-green-600 text-sm mt-1">{couponMessage}</p>}
+            {couponMessage && (
+              <p className="text-green-600 text-sm mt-1">{couponMessage}</p>
+            )}
           </div>
 
           {/* Payment */}
@@ -293,12 +391,17 @@ export default function CheckoutPage() {
             <span className="font-medium text-sm">Payment Method</span>
             <div className="flex flex-col gap-2">
               {["cod", "bkash", "card"].map((method) => (
-                <label key={method} className="flex items-center gap-3 border p-3 rounded cursor-pointer">
+                <label
+                  key={method}
+                  className="flex items-center gap-3 border p-3 rounded cursor-pointer"
+                >
                   <input
                     type="radio"
                     name="payment"
                     checked={paymentMethod === method}
-                    onChange={() => setPaymentMethod(method as "cod" | "bkash" | "card")}
+                    onChange={() =>
+                      setPaymentMethod(method as "cod" | "bkash" | "card")
+                    }
                   />
                   <span className="text-sm">
                     {method === "cod"
@@ -319,9 +422,19 @@ export default function CheckoutPage() {
             <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
             <div className="space-y-3 text-sm">
               {checkoutItems.map((item) => (
-                <div key={item.key} className="flex justify-between items-center">
-                  <span>{item.name} ({item.discount_price} x{item.quantity})</span>
-                  <span>৳ {Number(item.discount_price * item.quantity).toLocaleString()}</span>
+                <div
+                  key={item.key}
+                  className="flex justify-between items-center"
+                >
+                  <span>
+                    {item.name} ({item.discount_price} x{item.quantity})
+                  </span>
+                  <span>
+                    ৳{" "}
+                    {Number(
+                      item.discount_price * item.quantity
+                    ).toLocaleString()}
+                  </span>
                 </div>
               ))}
             </div>
@@ -347,10 +460,9 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Desktop Place Order Button */}
             <div className="hidden md:block mt-6">
               <button className="w-full bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition text-lg">
-                Place Order  ৳ {total.toLocaleString()}
+                Place Order ৳ {total.toLocaleString()}
               </button>
             </div>
           </div>
@@ -361,7 +473,9 @@ export default function CheckoutPage() {
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-white p-4 shadow-t flex justify-between items-center z-50">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600 font-semibold">Total</span>
-          <span className="text-lg font-semibold">৳ {total.toLocaleString()}</span>
+          <span className="text-lg font-semibold">
+            ৳ {total.toLocaleString()}
+          </span>
         </div>
         <button className="bg-orange-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-orange-600 transition">
           Place Order

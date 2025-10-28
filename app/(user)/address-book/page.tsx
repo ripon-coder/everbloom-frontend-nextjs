@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin,Trash } from "lucide-react";
+import { MapPin, Trash } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Address {
@@ -219,6 +219,14 @@ export default function AddressBookPage() {
         <h1 className="text-2xl font-semibold text-gray-800 mb-6">
           Address Book
         </h1>
+        {addresses.length >= 3 && (
+          <div className="flex justify-center bg-amber-50 border border-amber-200 rounded-md mb-3">
+            <p className="text-sm text-amber-700 px-4 py-2 flex items-center gap-2 text-center">
+              ⚠️ You can only save up to 3 addresses in your address book.
+              Please delete one before adding a new address.
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex flex-col gap-4">
@@ -236,6 +244,7 @@ export default function AddressBookPage() {
             <p className="text-gray-500 mb-4">
               You haven’t added any addresses yet.
             </p>
+
             <button
               onClick={() => setShowModal(true)}
               className="bg-amber-500 text-white px-6 py-2 rounded-md hover:bg-amber-600 transition"
@@ -253,10 +262,10 @@ export default function AddressBookPage() {
                 <div className="space-y-1">
                   <p className="font-medium text-gray-800">Name: {addr.name}</p>
                   <p className="text-gray-500 text-sm">Phone: {addr.phone}</p>
-                  <p className="text-gray-500 text-sm">Zone: {addr.zone}</p>
                   <p className="text-gray-500 text-sm">
                     Address: {addr.address}
                   </p>
+                  <p className="text-gray-500 text-sm">Zone: {addr.zone}</p>
                   <p className="text-gray-500 text-sm">
                     District: {addr.district}
                   </p>
@@ -270,7 +279,7 @@ export default function AddressBookPage() {
                   onClick={() => setDeleteConfirm(addr)}
                   className="text-red-500 border border-red-500 px-3 py-1 rounded-md hover:bg-red-50 transition"
                 >
-                  <Trash className="cursor-pointer hover:text-red-500"/>
+                  <Trash className="cursor-pointer hover:text-red-500" />
                 </button>
               </div>
             ))}
@@ -279,12 +288,14 @@ export default function AddressBookPage() {
 
         {addresses.length > 0 && (
           <div className="mt-6">
-            <button
-              onClick={() => setShowModal(true)}
-              className="bg-amber-500 text-white px-6 py-2 rounded-md hover:bg-amber-600 transition"
-            >
-              Add New Address
-            </button>
+            {addresses.length < 3 && (
+              <button
+                onClick={() => setShowModal(true)}
+                className="bg-amber-500 text-white px-6 py-2 rounded-md hover:bg-amber-600 transition"
+              >
+                Add New Address
+              </button>
+            )}
           </div>
         )}
 
