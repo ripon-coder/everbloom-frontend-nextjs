@@ -1,7 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getCart, setCheckoutItems, CheckoutItem } from "@/lib/checkout";
+import toast from "react-hot-toast";
 
 interface Variant {
   id: number;
@@ -41,12 +43,28 @@ interface Address {
 }
 
 export default function CheckoutPage() {
-  const [checkoutItems, setCheckoutItemsState] = useState<CheckoutVariant[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">("cod");
+  const router = useRouter();
+
+  const [checkoutItems, setCheckoutItemsState] = useState<CheckoutVariant[]>(
+    []
+  );
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">(
+    "cod"
+  );
 
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">("new");
+  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">(
+    "new"
+  );
   const [addressForm, setAddressForm] = useState({
+    name: "",
+    phone: "",
+    district: "",
+    zone: "",
+    address: "",
+  });
+
+  const [addressErrors, setAddressErrors] = useState({
     name: "",
     phone: "",
     district: "",
@@ -57,7 +75,9 @@ export default function CheckoutPage() {
   const [districts, setDistricts] = useState<District[]>([]);
   const [districtLoading, setDistrictLoading] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
-
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [couponMessage, setCouponMessage] = useState("");
   const [checkoutTotals, setCheckoutTotals] = useState({
@@ -68,7 +88,25 @@ export default function CheckoutPage() {
     flash_discount: 0,
   });
 
-  // Fetch district list
+  const paymentShortLabels: Record<"cod" | "bkash" | "card", string> = {
+    cod: "COD",
+    bkash: "bKash",
+    card: "Card",
+  };
+
+  const paymentFullLabels: Record<"cod" | "bkash" | "card", string> = {
+    cod: "Cash on Delivery",
+    bkash: "bKash / Mobile Banking",
+    card: "Credit / Debit Card",
+  };
+
+  // Redirect if cart is empty
+  useEffect(() => {
+    const localCart = getCart();
+    if (!localCart || localCart.length === 0) router.push("/cart");
+  }, [router]);
+
+  // Fetch districts
   useEffect(() => {
     const fetchDistricts = async () => {
       setDistrictLoading(true);
@@ -126,9 +164,16 @@ export default function CheckoutPage() {
       const addr = savedAddresses.find((a) => a.id === selectedAddressId);
       if (addr) setAddressForm(addr);
     }
+    setAddressErrors({
+      name: "",
+      phone: "",
+      district: "",
+      zone: "",
+      address: "",
+    });
   }, [selectedAddressId, savedAddresses]);
 
-  // Load checkout items and initial prices from variant API
+  // Load checkout items
   useEffect(() => {
     const localCart = getCart();
     if (!localCart || localCart.length === 0) return;
@@ -162,29 +207,36 @@ export default function CheckoutPage() {
     })
       .then((res) => res.json())
       .then((resData) => {
-        if (!resData.status || !resData.data) throw new Error("No variants found");
+        if (!resData.status || !resData.data)
+          throw new Error("No variants found");
 
         const variants: Variant[] = resData.data;
-        const updatedItems: CheckoutVariant[] = placeholders.map((ci, index) => {
-          const variant = variants.find((v) => v.id === ci.id);
-          if (variant) {
+        const updatedItems: CheckoutVariant[] = placeholders.map(
+          (ci, index) => {
+            const variant = variants.find((v) => v.id === ci.id);
+            if (variant) {
+              return {
+                ...ci,
+                ...variant,
+                discount_price: variant.discount_price || variant.sell_price,
+                sell_price: variant.sell_price,
+                fallbackImage: variant.images?.[0] || "",
+                isDisabled: variant.stock <= 0,
+                isLoadingPrice: false,
+                key: `${ci.id}-${index}`,
+              };
+            }
             return {
               ...ci,
-              ...variant,
-              discount_price: variant.discount_price || variant.sell_price,
-              sell_price: variant.sell_price,
-              fallbackImage: variant.images?.[0] || "",
-              isDisabled: variant.stock <= 0,
+              isDisabled: true,
               isLoadingPrice: false,
               key: `${ci.id}-${index}`,
             };
           }
-          return { ...ci, isDisabled: true, isLoadingPrice: false, key: `${ci.id}-${index}` };
-        });
+        );
 
         setCheckoutItemsState(updatedItems);
 
-        // 🔹 Compute initial subtotal locally
         const initialSubtotal = updatedItems.reduce(
           (sum, item) => sum + Number(item.discount_price) * item.quantity,
           0
@@ -192,13 +244,12 @@ export default function CheckoutPage() {
 
         setCheckoutTotals({
           subtotal: initialSubtotal,
-          shipping: 0, // initial shipping 0
+          shipping: 0,
           total: initialSubtotal,
           coupon_discount: 0,
           flash_discount: 0,
         });
 
-        // Save items to localStorage
         const itemsToSave: CheckoutItem[] = updatedItems
           .filter((item) => !item.isDisabled)
           .map((item) => ({
@@ -213,12 +264,13 @@ export default function CheckoutPage() {
       .catch((err) => console.error(err));
   }, []);
 
-  // 🔁 Recalculate totals using backend (shipping/coupons)
+  // Recalculate totals
   const recalculateCheckout = async (
     items = checkoutItems,
     coupon = couponCode,
     districtName = addressForm.district
   ) => {
+    setCouponMessage("");
     const district = districts.find(
       (d) => d.name.toLowerCase() === districtName.toLowerCase()
     );
@@ -232,6 +284,7 @@ export default function CheckoutPage() {
     }));
 
     try {
+      setShippingLoading(true);
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -241,7 +294,6 @@ export default function CheckoutPage() {
           district_id: district.id,
         }),
       });
-
       const data = await res.json();
       if (data.status && data.data) {
         const d = data.data;
@@ -252,34 +304,155 @@ export default function CheckoutPage() {
           coupon_discount: d.coupon_discount_amount || 0,
           flash_discount: d.flash_discount_amount || 0,
         });
-        setCouponMessage(`✅ Checkout updated (${coupon || "no coupon"})`);
-      } else {
-        setCouponMessage("Failed to update totals");
+        if (d.coupon_discount_amount > 0 && coupon)
+          setCouponMessage(`✔ Coupon Applied (${coupon})`);
+        if (coupon && d.coupon_discount_amount <= 0)
+          setCouponMessage(`❌ Coupon Failed (${coupon})`);
       }
     } catch (err) {
-      console.error(err);
-      setCouponMessage("Error calculating checkout");
+      toast.error("Failed to update totals");
+    } finally {
+      setShippingLoading(false);
+      setCouponLoading(false);
     }
   };
 
-  // Apply coupon
   const applyCoupon = async () => {
-    if (!couponCode) return setCouponMessage("Enter coupon code");
-    await recalculateCheckout(checkoutItems, couponCode, addressForm.district);
+    if (!couponCode)
+      return setCouponMessage("Please enter a coupon code first.");
+    if (addressForm.district === "")
+      return toast.error("Add your address before applying a coupon.", {
+        duration: 4000,
+        style: { whiteSpace: "nowrap", maxWidth: "none", fontSize: "14px" },
+      });
+
+    setCouponLoading(true);
+    const promise = recalculateCheckout(
+      checkoutItems,
+      couponCode,
+      addressForm.district
+    );
+    toast.promise(promise, {
+      loading: "Applying Coupon...",
+      success: "Coupon Status updated successfully!",
+      error: "Failed to apply coupon. Please try again.",
+    });
   };
 
-  // Recalculate when district changes
   useEffect(() => {
-    if (addressForm.district && checkoutItems.length > 0) {
+    if (addressForm.district && checkoutItems.length > 0)
       recalculateCheckout(checkoutItems, couponCode, addressForm.district);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addressForm.district]);
+
+  // Place order with validation
+  const placeOrder = async () => {
+    const errors: typeof addressErrors = {
+      name: "",
+      phone: "",
+      district: "",
+      zone: "",
+      address: "",
+    };
+    let hasError = false;
+
+    if (!addressForm.name) {
+      errors.name = "Name is required";
+      hasError = true;
+    }
+    if (!addressForm.phone) {
+      errors.phone = "Phone is required";
+      hasError = true;
+    }
+    if (!addressForm.district) {
+      errors.district = "District is required";
+      hasError = true;
+    }
+    if (!addressForm.zone) {
+      errors.zone = "Zone is required";
+      hasError = true;
+    }
+    if (!addressForm.address) {
+      errors.address = "Address is required";
+      hasError = true;
+    }
+
+    setAddressErrors(errors);
+
+    if (hasError) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    // Build product_list
+    const product_list = checkoutItems
+      .filter((item) => !item.isDisabled)
+      .map((item) => ({
+        product_id: String(item.product_id),
+        variant_id: String(item.id),
+        quantity: String(item.quantity),
+        flash_sale: "", // You can replace with actual flash sale if any
+      }));
+
+    // Find district ID
+    const district = districts.find(
+      (d) => d.name.toLowerCase() === addressForm.district.toLowerCase()
+    );
+    if (!district) {
+      toast.error("Invalid district selected");
+      return;
+    }
+
+    // Build payload
+    const payload = {
+      product_list,
+      coupon_code: couponCode || "",
+      payment_status: paymentMethod === "cod" ? "pending" : "paid", // adjust if needed
+      notes: "",
+      shipping_address: {
+        name: addressForm.name,
+        phone_number: addressForm.phone,
+        district_id: String(district.id),
+        zone: addressForm.zone,
+        address: addressForm.address,
+      },
+    };
+    setOrderLoading(true);
+    try {
+      await toast.promise(
+        (async () => {
+          const res = await fetch("/api/create-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.status)
+            throw new Error(data.message || "Failed to place order");
+
+          // Clear cart and redirect
+          setCheckoutItemsState([]);
+          setCheckoutItems([]);
+          router.push("/order-success");
+
+          return data;
+        })(),
+        {
+          loading: "Placing your order...",
+          success: "Order placed successfully!",
+          error: (err) => err.message || "Failed to place order",
+        }
+      );
+    } catch (err) {
+      console.error(err);
+      setOrderLoading(false);
+    }
+  };
 
   return (
     <div className="bg-gray-100 min-h-screen p-4">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
-        {/* Left Section */}
+        {/* Left */}
         <div className="md:w-2/3 bg-white p-6 rounded-lg shadow space-y-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold">Shipping Information</h2>
@@ -313,49 +486,86 @@ export default function CheckoutPage() {
               )}
             </select>
 
+            {/* Name */}
             <input
               type="text"
               placeholder="Name"
               value={addressForm.name}
-              onChange={(e) =>
-                setAddressForm({ ...addressForm, name: e.target.value })
-              }
-              className="border p-3 rounded w-full"
+              onChange={(e) => {
+                setAddressForm({ ...addressForm, name: e.target.value });
+                setAddressErrors({ ...addressErrors, name: "" });
+              }}
+              className={`border p-3 rounded w-full ${
+                addressErrors.name ? "border-red-500" : "border-gray-300"
+              }`}
             />
+            {addressErrors.name && (
+              <p className="text-red-500 text-sm mt-0">{addressErrors.name}</p>
+            )}
+
+            {/* Phone */}
             <input
               type="text"
               placeholder="Phone Number"
               value={addressForm.phone}
-              onChange={(e) =>
-                setAddressForm({ ...addressForm, phone: e.target.value })
-              }
-              className="border p-3 rounded w-full"
+              onChange={(e) => {
+                setAddressForm({ ...addressForm, phone: e.target.value });
+                setAddressErrors({ ...addressErrors, phone: "" });
+              }}
+              className={`border p-3 rounded w-full ${
+                addressErrors.phone ? "border-red-500" : "border-gray-300"
+              }`}
             />
+            {addressErrors.phone && (
+              <p className="text-red-500 text-sm mt-0">{addressErrors.phone}</p>
+            )}
+
+            {/* Address */}
             <textarea
               placeholder="Address"
               value={addressForm.address}
-              onChange={(e) =>
-                setAddressForm({ ...addressForm, address: e.target.value })
-              }
-              className="border p-3 rounded w-full"
+              onChange={(e) => {
+                setAddressForm({ ...addressForm, address: e.target.value });
+                setAddressErrors({ ...addressErrors, address: "" });
+              }}
+              className={`border p-3 rounded w-full ${
+                addressErrors.address ? "border-red-500" : "border-gray-300"
+              }`}
               rows={3}
             />
+            {addressErrors.address && (
+              <p className="text-red-500 text-sm mt-0">
+                {addressErrors.address}
+              </p>
+            )}
+
+            {/* Zone */}
             <input
               type="text"
               placeholder="Zone"
               value={addressForm.zone}
-              onChange={(e) =>
-                setAddressForm({ ...addressForm, zone: e.target.value })
-              }
-              className="border p-3 rounded w-full"
+              onChange={(e) => {
+                setAddressForm({ ...addressForm, zone: e.target.value });
+                setAddressErrors({ ...addressErrors, zone: "" });
+              }}
+              className={`border p-3 rounded w-full ${
+                addressErrors.zone ? "border-red-500" : "border-gray-300"
+              }`}
             />
+            {addressErrors.zone && (
+              <p className="text-red-500 text-sm mt-0">{addressErrors.zone}</p>
+            )}
 
+            {/* District */}
             <select
               value={addressForm.district}
-              onChange={(e) =>
-                setAddressForm({ ...addressForm, district: e.target.value })
-              }
-              className="border p-3 rounded w-full"
+              onChange={(e) => {
+                setAddressForm({ ...addressForm, district: e.target.value });
+                setAddressErrors({ ...addressErrors, district: "" });
+              }}
+              className={`border p-3 rounded w-full ${
+                addressErrors.district ? "border-red-500" : "border-gray-300"
+              }`}
               disabled={districtLoading}
             >
               <option value="">
@@ -367,23 +577,37 @@ export default function CheckoutPage() {
                 </option>
               ))}
             </select>
+            {addressErrors.district && (
+              <p className="text-red-500 text-sm mt-0">
+                {addressErrors.district}
+              </p>
+            )}
           </div>
 
           {/* Coupon */}
           <div className="mt-4">
-            <div className="flex gap-2">
+            <div className="flex gap-2 relative">
               <input
                 type="text"
                 placeholder="Enter coupon code"
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value)}
-                className="border p-3 rounded flex-1"
+                className="border p-3 rounded flex-1 pr-8"
               />
+              {couponCode && (
+                <span
+                  className="absolute right-12 top-3 cursor-pointer text-gray-400 hover:text-gray-700"
+                  onClick={() => setCouponCode("")}
+                >
+                  ✕
+                </span>
+              )}
               <button
                 onClick={applyCoupon}
                 className="bg-amber-500 text-white px-4 py-3 rounded hover:bg-amber-600 transition text-sm cursor-pointer"
+                disabled={couponLoading || shippingLoading}
               >
-                Apply
+                {couponLoading ? "Applying..." : "Apply"}
               </button>
             </div>
             {couponMessage && (
@@ -392,32 +616,47 @@ export default function CheckoutPage() {
           </div>
 
           {/* Payment */}
-          <div className="mt-6 space-y-2">
-            <span className="font-medium text-sm">Payment Method</span>
-            <div className="flex flex-col gap-2">
-              {["cod", "bkash", "card"].map((method) => (
+          <span className="font-medium text-sm mb-2 inline-block">
+            Payment Method
+          </span>
+          <div className="flex flex-col gap-3">
+            {["cod", "bkash", "card"].map((method) => {
+              const isSelected = paymentMethod === method;
+              return (
                 <label
                   key={method}
-                  className="flex items-center gap-3 border p-3 rounded cursor-pointer"
+                  className={`flex items-center gap-3 p-4 rounded-lg cursor-pointer border transition ${
+                    isSelected
+                      ? "border-amber-500 bg-amber-50"
+                      : "border-gray-300 hover:border-gray-400"
+                  }`}
                 >
                   <input
                     type="radio"
                     name="payment"
-                    checked={paymentMethod === method}
+                    checked={isSelected}
                     onChange={() =>
                       setPaymentMethod(method as "cod" | "bkash" | "card")
                     }
+                    className="hidden"
                   />
-                  <span className="text-sm">
-                    {method === "cod"
-                      ? "Cash on Delivery"
-                      : method === "bkash"
-                      ? "bKash / Mobile Banking"
-                      : "Credit / Debit Card"}
+                  <span
+                    className={`w-5 h-5 flex-shrink-0 rounded-full border flex items-center justify-center ${
+                      isSelected
+                        ? "border-amber-500 bg-amber-500"
+                        : "border-gray-300 bg-white"
+                    }`}
+                  >
+                    {isSelected && (
+                      <span className="w-2 h-2 rounded-full bg-white"></span>
+                    )}
+                  </span>
+                  <span className="text-sm font-medium">
+                    {paymentFullLabels[method as "cod" | "bkash" | "card"]}
                   </span>
                 </label>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
 
@@ -427,7 +666,10 @@ export default function CheckoutPage() {
             <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
             <div className="space-y-3 text-sm">
               {checkoutItems.map((item) => (
-                <div key={item.key} className="flex justify-between items-center">
+                <div
+                  key={item.key}
+                  className="flex justify-between items-center"
+                >
                   <span>
                     {item.name} ({item.quantity}x)
                   </span>
@@ -445,33 +687,62 @@ export default function CheckoutPage() {
             <div className="border-t mt-4 pt-3 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>৳ {checkoutTotals.subtotal.toLocaleString()}</span>
+                <span>
+                  {shippingLoading ? (
+                    <div className="h-5 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  ) : (
+                    `৳ ${checkoutTotals.subtotal.toLocaleString()}`
+                  )}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span>Delivery</span>
-                <span>৳ {checkoutTotals.shipping.toLocaleString()}</span>
+                <span>Shipping Charge</span>
+                <span>
+                  {shippingLoading ? (
+                    <div className="h-5 w-12 bg-gray-200 rounded animate-pulse"></div>
+                  ) : (
+                    `৳ ${checkoutTotals.shipping.toLocaleString()}`
+                  )}
+                </span>
               </div>
               {checkoutTotals.coupon_discount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Coupon Discount</span>
-                  <span>-৳ {checkoutTotals.coupon_discount.toLocaleString()}</span>
+                  <span>
+                    -৳ {checkoutTotals.coupon_discount.toLocaleString()}
+                  </span>
                 </div>
               )}
               {checkoutTotals.flash_discount > 0 && (
                 <div className="flex justify-between text-blue-600">
                   <span>Flash Discount</span>
-                  <span>-৳ {checkoutTotals.flash_discount.toLocaleString()}</span>
+                  <span>
+                    -৳ {checkoutTotals.flash_discount.toLocaleString()}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
-                <span>৳ {checkoutTotals.total.toLocaleString()}</span>
+                <span>
+                  {shippingLoading ? (
+                    <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  ) : (
+                    `৳ ${checkoutTotals.total.toLocaleString()}`
+                  )}
+                </span>
               </div>
             </div>
 
             <div className="hidden md:block mt-6">
-              <button className="w-full bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition text-lg">
-                Place Order ৳ {checkoutTotals.total.toLocaleString()}
+              <button
+                onClick={placeOrder}
+                className="w-full bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition text-lg cursor-pointer"
+                disabled={couponLoading || shippingLoading || orderLoading}
+              >
+                Place Order ({paymentShortLabels[paymentMethod]}){" "}
+                {shippingLoading
+                  ? ""
+                  : `৳ ${checkoutTotals.total.toLocaleString()}`}
               </button>
             </div>
           </div>
@@ -483,12 +754,18 @@ export default function CheckoutPage() {
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600 font-semibold">Total</span>
           <span className="text-lg font-semibold">
-            ৳ {checkoutTotals.total.toLocaleString()}
+            {shippingLoading ? (
+              <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+            ) : (
+              `৳ ${checkoutTotals.total.toLocaleString()}`
+            )}
           </span>
         </div>
-        
-        <button className="bg-orange-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-orange-600 transition">
-          Place Order
+        <button
+          onClick={placeOrder}
+          className="bg-orange-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-orange-600 transition"
+        >
+          Place Order ({paymentShortLabels[paymentMethod]})
         </button>
       </div>
     </div>

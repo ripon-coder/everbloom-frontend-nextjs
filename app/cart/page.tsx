@@ -334,9 +334,7 @@ export default function Cart() {
                   quantity: item.quantity,
                 }));
 
-              setCheckoutItems(checkoutData); // save before redirect
-              const tokenExists = document.cookie.includes("token");
-              console.log(tokenExists);
+              setCheckoutItems(checkoutData);
               router.push("/checkout");
             }}
             className={`w-full mt-4 bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition ${
