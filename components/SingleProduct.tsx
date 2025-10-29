@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { addToCart } from "@/lib/cart";
 import { toast, Toaster } from "react-hot-toast";
-import { clearCheckout,addToCheckout } from "@/lib/checkout";
+import { clearCheckout, addToCheckout } from "@/lib/checkout";
 
 // Types
 interface Attribute {
@@ -347,7 +347,7 @@ export default function SingleProduct({ product }: Props) {
                       variant_id: currentVariant.id,
                       productId: product.id,
                       name: product.name,
-                      quantity,
+                      quantity:quantity,
                     });
                     router.push("/checkout");
                   }}
