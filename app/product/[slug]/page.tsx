@@ -1,7 +1,7 @@
 // app/product/[slug]/page.tsx
-import SingleProduct from "@/components/SingleProduct";
-import ProductDescription from "@/components/ProductDescription";
-import ProductReview from "@/components/ProductReview";
+import { ProductCard } from "@/components/features/products";
+import { ProductDescription } from "@/components/features/products";
+import { ProductReview } from "@/components/features/products";
 import { notFound } from "next/navigation";
 
 interface ProductPageProps {
