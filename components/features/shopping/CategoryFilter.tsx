@@ -1,6 +1,6 @@
 import Image from "next/image";
-import category from "@/public/category.jpeg";
-import category1 from "@/public/category1.jpeg";
+import category from "@/public/images/categories/category.jpeg";
+import category1 from "@/public/images/categories/category1.jpeg";
 
 export default function Categories() {
   const categories = [
