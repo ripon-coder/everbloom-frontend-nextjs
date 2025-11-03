@@ -136,8 +136,9 @@ export default function Cart() {
         if (item.id === variantId && !item.isDisabled) {
           const newQty =
             action === "inc"
-              ? Math.min(item.quantity + 1, item.stock)
+              ? item.quantity + 1
               : Math.max(1, item.quantity - 1);
+
           return { ...item, quantity: newQty };
         }
         return item;
@@ -157,6 +158,11 @@ export default function Cart() {
       (acc, item) => acc + Number(item.discount_price) * item.quantity,
       0
     );
+
+  const hasStockExceeded = cartItems.some(
+    (item) =>
+      selectedItems.includes(item.id) && item.quantity > item.stock
+  );
 
   const total = subtotal;
 
@@ -182,11 +188,16 @@ export default function Cart() {
             <div className="space-y-4">
               {cartItems.map((item) => {
                 const imageSrc = item.fallbackImage || "/placeholder.png";
+                const isStockExceeded = item.quantity > item.stock;
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-center justify-between border-b pb-3 ${
+                    className={`flex items-center justify-between border-2 rounded p-2 ${
                       item.isDisabled ? "opacity-50" : ""
+                    } ${
+                      isStockExceeded && selectedItems.includes(item.id)
+                        ? "border-red-500"
+                        : "border-transparent"
                     }`}
                   >
                     <div className="flex items-center gap-4">
@@ -249,13 +260,21 @@ export default function Cart() {
                           )}
                         </p>
                         <p className="text-sm text-gray-600">
-                          Qty:{" "}
+                          Stock:{" "}
                           {item.isLoadingApi ? (
                             <span className="bg-gray-200 rounded w-24 h-3 inline-block animate-pulse" />
                           ) : (
-                            <span className="text-green-600">{item.stock ||  "Unknown Quantity"}</span>
+                            <span className="text-green-600">
+                              {item.stock || "Unknown Quantity"}
+                            </span>
                           )}
                         </p>
+                        {isStockExceeded &&
+                          selectedItems.includes(item.id) && (
+                            <p className="text-red-500 text-xs">
+                              Not enough stock.
+                            </p>
+                          )}
                         <p className="text-orange-600 font-semibold">
                           {item.isLoadingApi ? (
                             <span className="bg-gray-200 rounded w-16 h-4 inline-block animate-pulse" />
@@ -284,17 +303,11 @@ export default function Cart() {
                         <button
                           onClick={() => updateQty(item.id, "inc")}
                           className={`px-3 py-1 hover:bg-gray-100 ${
-                            item.quantity >= item.stock ||
-                            item.isDisabled ||
-                            item.isLoadingApi
+                            item.isDisabled || item.isLoadingApi
                               ? "cursor-not-allowed opacity-50"
                               : ""
                           }`}
-                          disabled={
-                            item.quantity >= item.stock ||
-                            item.isDisabled ||
-                            item.isLoadingApi
-                          }
+                          disabled={item.isDisabled || item.isLoadingApi}
                         >
                           +
                         </button>
@@ -328,7 +341,8 @@ export default function Cart() {
           <button
             disabled={
               selectedItems.length === 0 ||
-              cartItems.some((item) => item.isLoadingApi)
+              cartItems.some((item) => item.isLoadingApi) ||
+              hasStockExceeded
             }
             onClick={() => {
               const checkoutData = cartItems
@@ -348,7 +362,8 @@ export default function Cart() {
             }}
             className={`w-full mt-4 bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition ${
               selectedItems.length === 0 ||
-              cartItems.some((item) => item.isLoadingApi)
+              cartItems.some((item) => item.isLoadingApi) ||
+              hasStockExceeded
                 ? "cursor-not-allowed bg-gray-300 hover:bg-gray-300"
                 : ""
             }`}
