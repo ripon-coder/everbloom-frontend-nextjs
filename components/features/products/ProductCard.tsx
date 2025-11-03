@@ -4,9 +4,9 @@ import Image from "next/image";
 import { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { addToCart } from "@/lib/api/cart";
+import { addToCart } from "@/lib/utils/cart";
 import { toast, Toaster } from "react-hot-toast";
-import { clearCheckout, addToCheckout } from "@/lib/api/checkout";
+import { clearCheckout, addToCheckout } from "@/lib/utils/checkout";
 
 // Types
 interface Attribute {
