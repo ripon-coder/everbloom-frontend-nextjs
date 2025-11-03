@@ -2,8 +2,11 @@ import Image from "next/image";
 import category from "@/public/category.jpeg";
 import category1 from "@/public/category1.jpeg";
 
-export default function Categories() {
-  const categories = [
+// Server-side data fetching function
+async function getCategories() {
+  // For now, return static data since categories don't change frequently
+  // In the future, this could fetch from an API
+  return [
     { id: 1, img: category, name: "Fruit" },
     { id: 2, img: category, name: "Vegetables" },
     { id: 3, img: category, name: "Snacks" },
@@ -12,6 +15,10 @@ export default function Categories() {
     { id: 6, img: category1, name: "Dairy" },
     { id: 7, img: category, name: "Frozen Foods" },
   ];
+}
+
+export default async function Categories() {
+  const categories = await getCategories();
 
   return (
     <div className="p-4 bg-gray-100">
