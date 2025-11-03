@@ -6,8 +6,8 @@ export default function Home() {
   return (
     <>
       <FlashSale></FlashSale>
-      <Categories></Categories>
-      <Product></Product>
+      <CategoryFilter></CategoryFilter>
+      <ProductDetails></ProductDetails>
     </>
   );
 }
