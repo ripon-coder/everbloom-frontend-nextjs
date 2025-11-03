@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import Product from "@/components/Product";
+import ProductGrid from "@/components/Product";
 import Categories from "@/components/Categories";
 import FlashSale from "@/components/FlashSale";
 import { FlashSaleLoading, CategoriesLoading, ProductLoading } from "@/components/LoadingStates";
