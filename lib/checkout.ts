@@ -1,8 +1,10 @@
 // lib/checkout.ts
 export interface CheckoutItem {
+
   variant_id: number;
   productId: number;
   name: string;
+  discount_price?: number;
   quantity: number;
 }
 

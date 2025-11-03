@@ -2,6 +2,7 @@
 import SingleProduct from "@/components/SingleProduct";
 import ProductDescription from "@/components/ProductDescription";
 import ProductReview from "@/components/ProductReview";
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME;
 import { notFound } from "next/navigation";
 
 interface ProductPageProps {
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: ProductPageProps) {
 
     if (!product) return { title: "Product Not Found" };
 
-    const title = `${product.name} | YourShopName`;
+    const title = `${product.name} | ${siteName}`;
     const description =
       product.meta_description ||
       product.description?.slice(0, 150) ||

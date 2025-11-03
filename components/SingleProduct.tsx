@@ -34,6 +34,7 @@ interface Product {
   name: string;
   short_description?: string;
   description?: string;
+  is_free_delivery?: boolean;
   images?: string[];
   variants?: Variant[];
   slug?: string;
@@ -266,17 +267,42 @@ export default function SingleProduct({ product }: Props) {
             })}
           </div>
 
-          {/* Stock */}
-          <p className="text-sm mt-2">
-            <span className="font-medium">Stock:</span>{" "}
-            {inStock ? (
-              <span className="text-green-600">
-                {currentVariant?.stock} available
-              </span>
-            ) : (
-              <span className="text-red-500">Out of stock</span>
+          <div className="flex items-center gap-4 mt-2">
+            <p className="text-sm">
+              <span className="font-medium">Stock:</span>{" "}
+              {inStock ? (
+                <span className="text-green-600">
+                  {currentVariant?.stock} available
+                </span>
+              ) : (
+                <span className="text-red-500">Out of stock</span>
+              )}
+            </p>
+
+            {product.is_free_delivery && (
+              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold border border-green-200">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 10h2l3 9h8l3-9h2"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16 16v4m-8-4v4"
+                  />
+                </svg>
+                Free Delivery
+              </div>
             )}
-          </p>
+          </div>
 
           {/* Quantity */}
           {currentVariant && inStock && (
@@ -347,7 +373,8 @@ export default function SingleProduct({ product }: Props) {
                       variant_id: currentVariant.id,
                       productId: product.id,
                       name: product.name,
-                      quantity:quantity,
+                      quantity: quantity,
+                      discount_price: Number(currentVariant.discount_price),
                     });
                     router.push("/checkout");
                   }}

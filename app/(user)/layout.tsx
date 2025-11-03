@@ -1,8 +1,13 @@
 import LeftSidebar from "@/components/LeftSidebar";
-
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME;
 interface UserSectionLayoutProps {
   children: React.ReactNode;
 }
+
+export const metadata = {
+  title: `Profile - ${siteName}`,
+};
+
 
 export default function UserSectionLayout({ children }: UserSectionLayoutProps) {
   return (
