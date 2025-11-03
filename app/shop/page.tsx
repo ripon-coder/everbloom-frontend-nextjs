@@ -276,7 +276,7 @@ export default function ShopPage() {
           <div className="hidden md:block bg-white rounded-xl shadow-md p-4 space-y-6">
             <h2 className="text-lg font-semibold">Filter Products</h2>
 
-            <AttributeShop
+            <AttributeFilter
               attributes={attributes}
               selectedAttributes={tempAttributes}
               onAttributeSelect={(attr, val) =>
