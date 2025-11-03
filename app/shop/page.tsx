@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
 import { useRouter, useSearchParams } from "next/navigation";
-import ProductGrid, { Product } from "@/components/ProductGrid";
-import CategoryShop from "@/components/CategoryShop";
-import BrandShop from "@/components/BrandShop";
-import AttributeShop from "@/components/AttributeShop";
+import { ProductGrid, Product } from "@/components/features/products";
+import { CategoryShop } from "@/components/features/shopping";
+import { BrandFilter } from "@/components/features/shopping";
+import { AttributeFilter } from "@/components/features/shopping";
 
 export default function ShopPage() {
   const router = useRouter();
