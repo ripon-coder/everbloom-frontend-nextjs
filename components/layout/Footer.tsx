@@ -53,7 +53,7 @@ export default function Footer() {
         </div>
 
         {/* Newsletter */}
-        <NewsLetter></NewsLetter>
+        <Newsletter></Newsletter>
       </div>
 
       <div className="border-t border-gray-700 mt-8 pt-4 text-center text-gray-500 text-sm">
