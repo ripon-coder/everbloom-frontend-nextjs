@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   FiShoppingCart,
@@ -17,6 +17,51 @@ interface NavClientProps {
 
 export default function NavClient({ categories }: NavClientProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [cartQuantity, setCartQuantity] = useState(0);
+
+  // Fetch cart quantity on mount and update periodically
+  useEffect(() => {
+    const fetchCartQuantity = async () => {
+      try {
+        // First try to get from localStorage for immediate display
+        const localCart = localStorage.getItem('cart');
+        if (localCart) {
+          const cartItems = JSON.parse(localCart);
+          const quantity = cartItems.reduce((total: number, item: any) => total + item.quantity, 0);
+          setCartQuantity(quantity);
+        }
+
+        // Then fetch from API for live updates
+        const response = await fetch('/api/cart');
+        if (response.ok) {
+          const data = await response.json();
+          setCartQuantity(data.totalQuantity || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching cart quantity:', error);
+      }
+    };
+
+    // Initial fetch
+    fetchCartQuantity();
+
+    // Set up periodic polling for live updates (every 30 seconds)
+    const interval = setInterval(fetchCartQuantity, 30000);
+
+    // Listen for cart updates from other tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'cart') {
+        fetchCartQuantity();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   return (
     <>
