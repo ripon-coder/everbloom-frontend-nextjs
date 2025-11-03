@@ -1,6 +1,6 @@
 import Image from "next/image";
-import bottle from "@/public/bottle.webp";
-import productImg from "@/public/headphone.jpeg";
+import bottle from "@/public/images/products/bottle.webp";
+import productImg from "@/public/images/products/headphone.jpeg";
 
 export default function ProductGrid() {
   const products = [
