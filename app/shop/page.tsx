@@ -336,7 +336,7 @@ export default function ShopPage() {
                 <button onClick={() => setMobileFilterOpen(false)} className="text-gray-600 font-bold">X</button>
               </div>
 
-              <AttributeShop
+              <AttributeFilter
                 attributes={attributes}
                 selectedAttributes={tempAttributes}
                 onAttributeSelect={(attr, val) =>
