@@ -79,7 +79,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     if (!product) return notFound();
     return (
       <>
-        <SingleProduct product={product} />
+        <ProductCard product={product} />
         <ProductDescription description={product.description} />
         <ProductReview />
       </>
