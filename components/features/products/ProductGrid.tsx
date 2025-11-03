@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import customImageLoader from "@/lib/image-loader";
-import { ProductSkeleton } from "./ProductSkeleton";
+import { ProductSkeleton } from "@/components/features/products";
 import Link from "next/link";
 
 export interface Product {
