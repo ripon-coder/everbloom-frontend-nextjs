@@ -292,7 +292,7 @@ export default function ShopPage() {
 
             <div>
               <h3 className="font-medium mb-2 text-gray-700">Brands</h3>
-              <BrandShop brands={brands} selectedBrand={tempBrand} onBrandSelect={(brandSlug) => setTempBrand(prev => prev === brandSlug ? null : brandSlug)} />
+              <BrandFilter brands={brands} selectedBrand={tempBrand} onBrandSelect={(brandSlug) => setTempBrand(prev => prev === brandSlug ? null : brandSlug)} />
             </div>
 
             <div className="pt-4">
