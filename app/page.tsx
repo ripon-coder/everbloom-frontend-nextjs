@@ -1,7 +1,7 @@
 import Image from "next/image";
-import Product from "@/components/Product";
-import Categories from "@/components/Categories";
-import FlashSale from "@/components/FlashSale";
+import { ProductDetails } from "@/components/features/products";
+import { CategoryFilter } from "@/components/features/shopping";
+import { FlashSale } from "@/components/features/shopping";
 export default function Home() {
   return (
     <>
