@@ -1,2 +1,2 @@
 // Marketing feature components barrel export
-export { default as Newsletter } from './Newsletter';
+export { Newsletter } from './Newsletter';
