@@ -1,4 +1,4 @@
-import LeftSidebar from "@/components/LeftSidebar";
+import { Sidebar } from "@/components/layout";
 
 interface UserSectionLayoutProps {
   children: React.ReactNode;
