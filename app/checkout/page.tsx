@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCart, setCheckoutItems, CheckoutItem } from "@/lib/checkout";
+import { getCart, setCheckoutItems, CheckoutItem } from "@/lib/api/checkout";
 import toast from "react-hot-toast";
 
 interface Variant {
