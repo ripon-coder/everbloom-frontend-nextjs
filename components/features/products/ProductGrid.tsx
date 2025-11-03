@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import customImageLoader from "@/lib/image-loader";
+import customImageLoader from "@/lib/utils/image-loader";
 import { ProductSkeleton } from "@/components/features/products";
 import Link from "next/link";
 
