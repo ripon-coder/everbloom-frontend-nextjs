@@ -40,8 +40,6 @@ export default function ProductGrid({
           Array.from({ length: 8 }).map((_, index) => (
             <ProductSkeleton key={index} />
           ))
-        ) : products.length === 0 ? (
-          <p className="text-gray-500 col-span-full">No products found.</p>
         ) : (
           products.map((p) => (
             <Link key={p.id} href={`/product/${p.slug}`}>

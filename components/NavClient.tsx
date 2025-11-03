@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { getCartCount } from "@/lib/cart";
+
 import {
   FiShoppingCart,
   FiHeart,
@@ -17,49 +19,19 @@ interface NavClientProps {
 
 export default function NavClient({ categories }: NavClientProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [cartQuantity, setCartQuantity] = useState(0);
+  const [cartCount, setCartCount] = useState(0);
 
-  // Fetch cart quantity on mount and update periodically
   useEffect(() => {
-    const fetchCartQuantity = async () => {
-      try {
-        // First try to get from localStorage for immediate display
-        const localCart = localStorage.getItem('cart');
-        if (localCart) {
-          const cartItems = JSON.parse(localCart);
-          const quantity = cartItems.reduce((total: number, item: any) => total + item.quantity, 0);
-          setCartQuantity(quantity);
-        }
-
-        // Then fetch from API for live updates
-        const response = await fetch('/api/cart');
-        if (response.ok) {
-          const data = await response.json();
-          setCartQuantity(data.totalQuantity || 0);
-        }
-      } catch (error) {
-        console.error('Error fetching cart quantity:', error);
-      }
+    const updateCartCount = () => {
+      setCartCount(getCartCount());
     };
 
-    // Initial fetch
-    fetchCartQuantity();
+    updateCartCount(); // Initial count
 
-    // Set up periodic polling for live updates (every 30 seconds)
-    const interval = setInterval(fetchCartQuantity, 30000);
-
-    // Listen for cart updates from other tabs
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'cart') {
-        fetchCartQuantity();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener("cartchange", updateCartCount);
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener("cartchange", updateCartCount);
     };
   }, []);
 
@@ -113,9 +85,11 @@ export default function NavClient({ categories }: NavClientProps) {
             className="relative text-gray-700 hover:text-amber-500 transition-colors text-xl"
           >
             <FiShoppingCart />
-            <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs px-1 rounded-full">
-              1
-            </span>
+            {cartCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs px-1 rounded-full">
+                {cartCount}
+              </span>
+            )}
           </Link>
 
           {/* Mobile menu toggle */}

@@ -66,6 +66,7 @@ export function addToCart(item: CartItem) {
 
   try {
     localStorage.setItem("cart", JSON.stringify(cart));
+    window.dispatchEvent(new Event("cartchange"));
     toast.success(`${item.name} added to cart!`);
   } catch (error) {
     console.error("Failed to save cart:", error);
@@ -81,12 +82,21 @@ export function getCart(): CartItem[] {
 }
 
 /**
+ * Get the total number of items in the cart
+ */
+export function getCartCount(): number {
+  const cart = safeParseCart();
+  return cart.length;
+}
+
+/**
  * Remove a cart item by variant ID, keeping order intact
  */
 export function removeFromCart(variantId: number) {
   const cart = safeParseCart().filter(i => i.variantId !== variantId);
   try {
     localStorage.setItem("cart", JSON.stringify(cart));
+    window.dispatchEvent(new Event("cartchange"));
     toast.success("Item removed from cart.");
   } catch (error) {
     console.error("Failed to remove item:", error);
@@ -100,6 +110,7 @@ export function removeFromCart(variantId: number) {
 export function clearCart() {
   try {
     localStorage.removeItem("cart");
+    window.dispatchEvent(new Event("cartchange"));
     toast.success("Cart cleared.");
   } catch (error) {
     console.error("Failed to clear cart:", error);
