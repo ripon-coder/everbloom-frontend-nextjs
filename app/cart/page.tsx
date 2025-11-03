@@ -6,8 +6,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaTrash } from "react-icons/fa";
-import { getCart, removeFromCart } from "@/lib/cart";
-import { setCheckoutItems } from "@/lib/checkout";
+import { getCart, removeFromCart } from "@/lib/api/cart";
+import { setCheckoutItems } from "@/lib/api/checkout";
 
 interface LocalCartItem {
   variantId: number;
