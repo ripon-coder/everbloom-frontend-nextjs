@@ -88,7 +88,7 @@ export default async function Home() {
 
       {/* Products Section with Suspense */}
       <Suspense fallback={<ProductLoading />}>
-        <Product />
+        <ProductGrid />
       </Suspense>
     </>
   );
