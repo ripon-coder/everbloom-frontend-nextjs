@@ -69,10 +69,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Nav></Nav>
+        <NavServer />
         {children}
         <Toaster position="top-center" reverseOrder={false} />
-        <Footer></Footer>
+        <Footer />
       </body>
     </html>
   );
