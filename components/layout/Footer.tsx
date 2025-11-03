@@ -1,4 +1,4 @@
-import NewsLetter from "./NewsLetter";
+import { Newsletter } from "@/components/features/marketing";
 import { FiFacebook, FiInstagram, FiTwitter, FiYoutube } from "react-icons/fi";
 
 export default function Footer() {
