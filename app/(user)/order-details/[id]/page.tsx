@@ -1,10 +1,10 @@
-import OrderPage from './OrderClient';
+import OrderDetailsPage from './OrderDetailsClient';
 
 export const metadata = {
-  title: 'Orders | MyStore',
+  title: 'Order Details | MyStore',
   description: 'View the details of your order including products, pricing, and shipping information.',
   openGraph: {
-    title: 'Order | MyStore',
+    title: 'Order Details | MyStore',
     description: 'Check the status and details of your order.',
     type: 'website',
   },
@@ -16,5 +16,5 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <OrderPage />;
+  return <OrderDetailsPage />;
 }
