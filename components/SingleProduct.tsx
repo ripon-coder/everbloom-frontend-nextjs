@@ -5,8 +5,10 @@ import { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { addToCart } from "@/lib/cart";
-import { toast, Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { clearCheckout, addToCheckout } from "@/lib/checkout";
+import { Heart } from "lucide-react";
+import WishlistButton from "@/components/WishlistButton";
 
 // Types
 interface Attribute {
@@ -38,6 +40,7 @@ interface Product {
   images?: string[];
   variants?: Variant[];
   slug?: string;
+  is_wishlisted?: boolean;
 }
 
 interface Props {
@@ -58,6 +61,9 @@ export default function SingleProduct({ product }: Props) {
   );
   const [quantity, setQuantity] = useState(1);
   const imageContainerRef = useRef<HTMLDivElement>(null);
+
+  // Wishlist state
+  const [isWishlisted, setIsWishlisted] = useState(false);
 
   // Zoom logic
   const [isZoomed, setIsZoomed] = useState(false);
@@ -150,7 +156,7 @@ export default function SingleProduct({ product }: Props) {
     <div className="p-4 bg-white min-h-screen">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Images */}
-        <div className="w-full">
+        <div className="w-full relative">
           <div
             ref={imageContainerRef}
             className="relative w-full h-96 border rounded-lg overflow-hidden cursor-zoom-in"
@@ -221,12 +227,21 @@ export default function SingleProduct({ product }: Props) {
             </p>
           )}
 
-          {/* Price */}
-          <div className="text-3xl font-bold text-orange-600 flex items-center gap-3">
-            <span>৳ {currentVariant?.discount_price}</span>
+          {/* Price + Wishlist */}
+          <div className="flex items-center gap-3">
+            <span className="text-3xl font-bold text-orange-600">
+              ৳ {currentVariant?.discount_price}
+            </span>
+
             {currentVariant?.discount_price !== currentVariant?.sell_price && (
-              <span className="text-gray-400 line-through text-xl">
+              <span className="text-gray-400 line-through text-xl flex items-center gap-2">
                 ৳ {currentVariant?.sell_price}
+                {/* Bigger wishlist icon with some spacing */}
+                <WishlistButton
+                  productId={product.id}
+                  isInitiallyWishlisted={product.is_wishlisted}
+                  className="w-7 h-7 ml-2" // bigger & slightly away
+                />
               </span>
             )}
           </div>
@@ -267,6 +282,7 @@ export default function SingleProduct({ product }: Props) {
             })}
           </div>
 
+          {/* Stock Info */}
           <div className="flex items-center gap-4 mt-2">
             <p className="text-sm">
               <span className="font-medium">Stock:</span>{" "}
@@ -342,7 +358,6 @@ export default function SingleProduct({ product }: Props) {
                       toast.error("Please select all product options", {
                         id: "attr-error",
                       });
-
                       return;
                     }
                     addToCart({
@@ -354,6 +369,7 @@ export default function SingleProduct({ product }: Props) {
                       image: mainImage,
                       slug: product.slug ?? "",
                     });
+                    toast.success("Added to cart 🛒");
                   }}
                 >
                   Add to Cart
