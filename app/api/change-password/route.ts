@@ -1,6 +1,5 @@
-// /app/api/logout/route.ts
+// /app/api/address-book/save/route.ts
 export const runtime = "nodejs";
-
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -10,7 +9,6 @@ export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
-
     if (!token) {
       return NextResponse.json(
         { status: false, message: "Unauthorized" },
@@ -18,30 +16,29 @@ export async function POST(request: Request) {
       );
     }
 
-    // Call backend logout API
-    const response = await fetch(`${API_BASE_URL}/logout`, {
+    const body = await request.json();
+    const { current_password,new_password,new_password_confirmation } = body;
+
+    // Call backend API
+    const response = await fetch(`${API_BASE_URL}/change-password`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({
+        current_password,
+        new_password,
+        new_password_confirmation
+      }),
     });
 
     const data = await response.json();
 
-    // Clear token cookie
-    const res = NextResponse.json(data, { status: response.status });
-    res.cookies.set("token", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: 0, // expire immediately
-    });
-
-    return res;
+    // Forward backend status code and full response
+    return NextResponse.json(data, { status: response.status });
   } catch (err) {
-    console.error("Logout error:", err);
+    console.error("change password error:", err);
     return NextResponse.json(
       { status: false, message: "Internal Server Error" },
       { status: 500 }

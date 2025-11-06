@@ -1,4 +1,7 @@
 import AddressBookPage from "./AddressClient";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
 const siteName = process.env.NEXT_PUBLIC_SITE_NAME;
 export const metadata = {
   title: 'Address Book | MyStore',
@@ -15,6 +18,13 @@ export const metadata = {
   },
 };
 
-export default function AddressBook() {
+export default async function Page() {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+  
+    if (!token) {
+      const currentUrl = "/address-book";
+      redirect(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+    }
   return <AddressBookPage />;
 }

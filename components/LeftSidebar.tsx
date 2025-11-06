@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { logoutUser } from "@/lib/auth";
+
 import {
   FiUser,
   FiShoppingBag,
@@ -51,19 +53,6 @@ export default function LeftSidebar() {
   const handleMenuClick = (url: string) => {
     router.push(url);
     setIsOpen(false);
-  };
-
-  const handleLogout = async () => {
-    try {
-      const res = await fetch("/api/logout", { method: "POST" });
-      const data = await res.json();
-
-      if (data.status) {
-        router.push("/login");
-      }
-    } catch (err) {
-      console.error("Logout failed", err);
-    }
   };
 
   return (
@@ -122,7 +111,7 @@ export default function LeftSidebar() {
 
           <div>
             <button
-              onClick={handleLogout}
+              onClick={logoutUser}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-500 border border-red-500 cursor-pointer hover:bg-red-50 transition"
             >
               <FiLogOut /> Logout

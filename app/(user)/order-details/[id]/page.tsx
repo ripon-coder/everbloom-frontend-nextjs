@@ -1,20 +1,30 @@
-import OrderDetailsPage from './OrderDetailsClient';
+import OrderDetailsPage from "./OrderDetailsClient";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: 'Order Details | MyStore',
-  description: 'View the details of your order including products, pricing, and shipping information.',
+  title: "Order Details | MyStore",
+  description:
+    "View the details of your order including products, pricing, and shipping information.",
   openGraph: {
-    title: 'Order Details | MyStore',
-    description: 'Check the status and details of your order.',
-    type: 'website',
+    title: "Order Details | MyStore",
+    description: "Check the status and details of your order.",
+    type: "website",
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'Order Details | MyStore',
-    description: 'Check the status and details of your order.',
+    card: "summary_large_image",
+    title: "Order Details | MyStore",
+    description: "Check the status and details of your order.",
   },
 };
 
-export default function Page() {
+export default async function Page() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+
+  if (!token) {
+    const currentUrl = "/my-orders";
+    redirect(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+  }
   return <OrderDetailsPage />;
 }
