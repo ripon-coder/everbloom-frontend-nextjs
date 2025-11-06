@@ -1,4 +1,7 @@
 import LeftSidebar from "@/components/LeftSidebar";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
 const siteName = process.env.NEXT_PUBLIC_SITE_NAME;
 interface UserSectionLayoutProps {
   children: React.ReactNode;
@@ -8,8 +11,16 @@ export const metadata = {
   title: `Profile - ${siteName}`,
 };
 
+export default async function UserSectionLayout({
+  children,
+}: UserSectionLayoutProps) {
 
-export default function UserSectionLayout({ children }: UserSectionLayoutProps) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  if (!token) {
+    redirect(`/login`);
+  }
+
   return (
     <div className="flex flex-col md:flex-row bg-gray-50">
       {/* Sidebar */}
