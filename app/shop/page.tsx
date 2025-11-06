@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ProductGrid, { Product } from "@/components/ProductGrid";
 import CategoryShop from "@/components/CategoryShop";
 import BrandShop from "@/components/BrandShop";
-import AttributeShop from "@/components/AttributeShop";
 
 export default function ShopPage() {
   const router = useRouter();
@@ -20,7 +19,6 @@ export default function ShopPage() {
 
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [attributes, setAttributes] = useState([]);
   const [isLoadingFilters, setIsLoadingFilters] = useState(true);
 
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
@@ -29,31 +27,39 @@ export default function ShopPage() {
   const [categorySlug, setCategorySlug] = useState<string | null>(null);
   const [minPrice, setMinPrice] = useState<number | "">("");
   const [maxPrice, setMaxPrice] = useState<number | "">("");
-  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string | null>>({});
+  const [stockIn, setStockIn] = useState<boolean>(false);
+  const [priceSort, setPriceSort] = useState<"low_to_high" | "high_to_low" | "">("");
+  const [freeDelivery, setFreeDelivery] = useState<boolean>(false);
 
   const [tempBrand, setTempBrand] = useState<string | null>(null);
   const [tempCategory, setTempCategory] = useState<string | null>(null);
-  const [tempAttributes, setTempAttributes] = useState<Record<string, string | null>>({});
   const [tempMinPrice, setTempMinPrice] = useState<number | "">("");
   const [tempMaxPrice, setTempMaxPrice] = useState<number | "">("");
+  const [tempStockIn, setTempStockIn] = useState<boolean>(false);
+  const [tempPriceSort, setTempPriceSort] = useState<"low_to_high" | "high_to_low" | "">("");
+  const [tempFreeDelivery, setTempFreeDelivery] = useState<boolean>(false);
 
   // --- Fetch Products ---
   const fetchProductsWithParams = useCallback(
     async ({
-      selectedAttributes,
       selectedBrand,
       categorySlug,
       minPrice,
       maxPrice,
+      stockIn,
+      priceSort,
+      freeDelivery,
       page = 1,
       append = false,
       updateUrl = true,
     }: {
-      selectedAttributes: Record<string, string | null>;
       selectedBrand: string | null;
       categorySlug: string | null;
       minPrice: number | "";
       maxPrice: number | "";
+      stockIn?: boolean;
+      priceSort?: "low_to_high" | "high_to_low" | "";
+      freeDelivery?: boolean;
       page?: number;
       append?: boolean;
       updateUrl?: boolean;
@@ -67,11 +73,11 @@ export default function ShopPage() {
         const params = new URLSearchParams();
         if (selectedBrand) params.set("brand", selectedBrand);
         if (categorySlug) params.set("category", categorySlug);
-        Object.entries(selectedAttributes).forEach(([key, value]) => {
-          if (value) params.set(key.toLowerCase(), value);
-        });
         if (minPrice !== "") params.set("min_price", minPrice.toString());
         if (maxPrice !== "") params.set("max_price", maxPrice.toString());
+        if (stockIn) params.set("stock_in", "1");
+        if (freeDelivery) params.set("free_delivery", "1");
+        if (priceSort) params.set("price_sort", priceSort);
         params.set("current_page", page.toString());
         params.set("per_page", "8");
 
@@ -108,11 +114,13 @@ export default function ShopPage() {
 
   const fetchProducts = (page = 1, append = false, updateUrl = true) => {
     fetchProductsWithParams({
-      selectedAttributes,
       selectedBrand,
       categorySlug,
       minPrice,
       maxPrice,
+      stockIn,
+      priceSort,
+      freeDelivery,
       page,
       append,
       updateUrl,
@@ -137,55 +145,40 @@ export default function ShopPage() {
     fetchFilters();
   }, [categorySlug]);
 
-  // --- Fetch Attributes ---
-  useEffect(() => {
-    const fetchAttribute = async () => {
-      try {
-        const params = new URLSearchParams({ category: categorySlug || "" });
-        const response = await fetch("/api/shop-attribute?" + params.toString());
-        const data = await response.json();
-        const apiData = data.data || data;
-        setAttributes(apiData.attributes || []);
-      } catch (err) {
-        console.error("Failed to fetch attributes:", err);
-      } finally {
-        setIsLoadingFilters(false);
-      }
-    };
-    fetchAttribute();
-  }, [categorySlug]);
-
   // --- Read filters from URL ---
   useEffect(() => {
     const categoryFromUrl = searchParams.get("category");
     const brandFromUrl = searchParams.get("brand");
     const minP = searchParams.get("min_price");
     const maxP = searchParams.get("max_price");
-
-    const newAttrs: Record<string, string> = {};
-    searchParams.forEach((value, key) => {
-      if (!["category","brand","min_price","max_price","current_page","per_page"].includes(key))
-        newAttrs[key] = value;
-    });
+    const stock = searchParams.get("stock_in");
+    const delivery = searchParams.get("free_delivery");
+    const sort = searchParams.get("price_sort") as "low_to_high" | "high_to_low" | null;
 
     setCategorySlug(categoryFromUrl);
     setSelectedBrand(brandFromUrl);
     setMinPrice(minP ? Number(minP) : "");
     setMaxPrice(maxP ? Number(maxP) : "");
-    setSelectedAttributes(newAttrs);
+    setStockIn(stock === "1");
+    setFreeDelivery(delivery === "1");
+    setPriceSort(sort || "");
 
     setTempCategory(categoryFromUrl);
     setTempBrand(brandFromUrl);
     setTempMinPrice(minP ? Number(minP) : "");
     setTempMaxPrice(maxP ? Number(maxP) : "");
-    setTempAttributes(newAttrs);
+    setTempStockIn(stock === "1");
+    setTempFreeDelivery(delivery === "1");
+    setTempPriceSort(sort || "");
 
     fetchProductsWithParams({
-      selectedAttributes: newAttrs,
       selectedBrand: brandFromUrl,
       categorySlug: categoryFromUrl,
       minPrice: minP ? Number(minP) : "",
       maxPrice: maxP ? Number(maxP) : "",
+      stockIn: stock === "1",
+      freeDelivery: delivery === "1",
+      priceSort: sort || "",
       page: 1,
       append: false,
       updateUrl: false,
@@ -195,16 +188,20 @@ export default function ShopPage() {
   const handleFilterApply = () => {
     setSelectedBrand(tempBrand);
     setCategorySlug(tempCategory);
-    setSelectedAttributes(tempAttributes);
     setMinPrice(tempMinPrice);
     setMaxPrice(tempMaxPrice);
+    setStockIn(tempStockIn);
+    setPriceSort(tempPriceSort);
+    setFreeDelivery(tempFreeDelivery);
 
     fetchProductsWithParams({
-      selectedAttributes: tempAttributes,
       selectedBrand: tempBrand,
       categorySlug: tempCategory,
       minPrice: tempMinPrice,
       maxPrice: tempMaxPrice,
+      stockIn: tempStockIn,
+      priceSort: tempPriceSort,
+      freeDelivery: tempFreeDelivery,
       page: 1,
       append: false,
       updateUrl: true,
@@ -221,22 +218,28 @@ export default function ShopPage() {
   const resetFilters = () => {
     setTempBrand(null);
     setTempCategory(null);
-    setTempAttributes({});
     setTempMinPrice("");
     setTempMaxPrice("");
+    setTempStockIn(false);
+    setTempPriceSort("");
+    setTempFreeDelivery(false);
 
     setSelectedBrand(null);
     setCategorySlug(null);
-    setSelectedAttributes({});
     setMinPrice("");
     setMaxPrice("");
+    setStockIn(false);
+    setPriceSort("");
+    setFreeDelivery(false);
 
     fetchProductsWithParams({
-      selectedAttributes: {},
       selectedBrand: null,
       categorySlug: null,
       minPrice: "",
       maxPrice: "",
+      stockIn: false,
+      priceSort: "",
+      freeDelivery: false,
       page: 1,
       append: false,
       updateUrl: true,
@@ -244,14 +247,15 @@ export default function ShopPage() {
     setMobileFilterOpen(false);
   };
 
-  // --- Dynamic meta title & description based on filters ---
+  // --- Dynamic meta title & description ---
   const metaTitle = categorySlug
     ? `${categorySlug} Products - Your Store`
     : "Shop Products - Your Store";
 
-  const metaDescription = categorySlug || selectedBrand
-    ? `Browse ${categorySlug || ""} ${selectedBrand || ""} products. Filter by attributes, price, and more to find your perfect product.`
-    : "Browse all products in our store. Filter by category, brand, attributes, or price range to find the perfect product.";
+  const metaDescription =
+    categorySlug || selectedBrand
+      ? `Browse ${categorySlug || ""} ${selectedBrand || ""} products. Filter by price, category, brand, stock, or delivery.`
+      : "Browse all products in our store. Filter by category, brand, stock, delivery, or price range to find your perfect product.";
 
   return (
     <>
@@ -276,37 +280,109 @@ export default function ShopPage() {
           <div className="hidden md:block bg-white rounded-xl shadow-md p-4 space-y-6">
             <h2 className="text-lg font-semibold">Filter Products</h2>
 
-            <AttributeShop
-              attributes={attributes}
-              selectedAttributes={tempAttributes}
-              onAttributeSelect={(attr, val) =>
-                setTempAttributes((prev) => ({ ...prev, [attr]: prev[attr] === val ? null : val }))
-              }
-              isLoading={isLoadingFilters}
-            />
-
             <div>
               <h3 className="font-medium mb-2 text-gray-700">Categories</h3>
-              <CategoryShop categories={categories} setCategorySlug={setTempCategory} selectedCategorySlug={tempCategory} />
+              <CategoryShop
+                categories={categories}
+                setCategorySlug={setTempCategory}
+                selectedCategorySlug={tempCategory}
+                isLoading={isLoadingFilters}
+              />
             </div>
 
             <div>
               <h3 className="font-medium mb-2 text-gray-700">Brands</h3>
-              <BrandShop brands={brands} selectedBrand={tempBrand} onBrandSelect={(brandSlug) => setTempBrand(prev => prev === brandSlug ? null : brandSlug)} />
+              <BrandShop
+                brands={brands}
+                selectedBrand={tempBrand}
+                onBrandSelect={(brandSlug) =>
+                  setTempBrand((prev) => (prev === brandSlug ? null : brandSlug))
+                }
+                isLoading={isLoadingFilters}
+              />
             </div>
 
-            <div className="pt-4">
+            <div className="pt-1">
               <h3 className="font-medium mb-2">Price Range (৳)</h3>
               <div className="flex items-center gap-3">
-                <input type="number" min={0} value={tempMinPrice} onChange={(e) => setTempMinPrice(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border rounded-md px-2 py-1" placeholder="Min"/>
+                <input
+                  type="number"
+                  min={0}
+                  value={tempMinPrice}
+                  onChange={(e) =>
+                    setTempMinPrice(e.target.value === "" ? "" : Number(e.target.value))
+                  }
+                  className="w-full border rounded-md px-2 py-1"
+                  placeholder="Min"
+                />
                 <span>-</span>
-                <input type="number" min={0} value={tempMaxPrice} onChange={(e) => setTempMaxPrice(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border rounded-md px-2 py-1" placeholder="Max"/>
+                <input
+                  type="number"
+                  min={0}
+                  value={tempMaxPrice}
+                  onChange={(e) =>
+                    setTempMaxPrice(e.target.value === "" ? "" : Number(e.target.value))
+                  }
+                  className="w-full border rounded-md px-2 py-1"
+                  placeholder="Max"
+                />
               </div>
             </div>
 
+            <div className="pt-1">
+              <h3 className="font-medium mb-2">Stock</h3>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={tempStockIn}
+                  onChange={(e) => setTempStockIn(e.target.checked)}
+                  className="form-checkbox"
+                />
+                In Stock
+              </label>
+            </div>
+
+            <div className="pt-1">
+              <h3 className="font-medium mb-2">Sort by Price</h3>
+              <select
+                value={tempPriceSort}
+                onChange={(e) =>
+                  setTempPriceSort(e.target.value as "low_to_high" | "high_to_low" | "")
+                }
+                className="w-full border rounded-md px-2 py-1"
+              >
+                <option value="">Select</option>
+                <option value="low_to_high">Low to High</option>
+                <option value="high_to_low">High to Low</option>
+              </select>
+            </div>
+
+            <div className="pt-1">
+              <h3 className="font-medium mb-2">Delivery</h3>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={tempFreeDelivery}
+                  onChange={(e) => setTempFreeDelivery(e.target.checked)}
+                  className="form-checkbox"
+                />
+                Free Delivery
+              </label>
+            </div>
+
             <div className="flex gap-2 mt-4">
-              <button onClick={handleFilterApply} className="w-full bg-green-600 text-white text-sm py-1.5 rounded-md hover:bg-green-700 transition cursor-pointer">Apply Filters</button>
-              <button onClick={resetFilters} className="w-full bg-orange-500 text-white text-sm py-1.5 rounded-md hover:bg-orange-600 transition cursor-pointer">Reset</button>
+              <button
+                onClick={handleFilterApply}
+                className="w-full bg-amber-500 text-white text-sm py-1.5 rounded-md hover:bg-amber-600 transition cursor-pointer"
+              >
+                Apply Filters
+              </button>
+              <button
+                onClick={resetFilters}
+                className="w-full bg-red-500 text-white text-sm py-1.5 rounded-md hover:bg-red-600 transition cursor-pointer"
+              >
+                Reset
+              </button>
             </div>
           </div>
 
@@ -342,40 +418,121 @@ export default function ShopPage() {
             <div className="bg-white w-2/3 sm:w-1/2 p-4 overflow-y-auto shadow-lg z-50">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">Filter Products</h2>
-                <button onClick={() => setMobileFilterOpen(false)} className="text-gray-600 font-bold">X</button>
+                <button
+                  onClick={() => setMobileFilterOpen(false)}
+                  className="text-gray-600 font-bold"
+                >
+                  X
+                </button>
               </div>
-
-              <AttributeShop
-                attributes={attributes}
-                selectedAttributes={tempAttributes}
-                onAttributeSelect={(attr, val) =>
-                  setTempAttributes((prev) => ({ ...prev, [attr]: prev[attr] === val ? null : val }))
-                }
-                isLoading={isLoadingFilters}
-              />
 
               <div className="mt-4">
                 <h3 className="font-medium mb-2 text-gray-700">Categories</h3>
-                <CategoryShop categories={categories} setCategorySlug={setTempCategory} selectedCategorySlug={tempCategory} />
+                <CategoryShop
+                  categories={categories}
+                  setCategorySlug={setTempCategory}
+                  selectedCategorySlug={tempCategory}
+                  isLoading={isLoadingFilters}
+                />
               </div>
 
               <div className="mt-4">
                 <h3 className="font-medium mb-2 text-gray-700">Brands</h3>
-                <BrandShop brands={brands} selectedBrand={tempBrand} onBrandSelect={(brandSlug) => setTempBrand(prev => prev === brandSlug ? null : brandSlug)} />
+                <BrandShop
+                  brands={brands}
+                  selectedBrand={tempBrand}
+                  onBrandSelect={(brandSlug) =>
+                    setTempBrand((prev) => (prev === brandSlug ? null : brandSlug))
+                  }
+                  isLoading={isLoadingFilters}
+                />
               </div>
 
               <div className="pt-4">
                 <h3 className="font-medium mb-2">Price Range (৳)</h3>
                 <div className="flex items-center gap-3">
-                  <input type="number" min={0} value={tempMinPrice} onChange={(e) => setTempMinPrice(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border rounded-md px-2 py-1" placeholder="Min"/>
+                  <input
+                    type="number"
+                    min={0}
+                    value={tempMinPrice}
+                    onChange={(e) =>
+                      setTempMinPrice(
+                        e.target.value === "" ? "" : Number(e.target.value)
+                      )
+                    }
+                    className="w-full border rounded-md px-2 py-1"
+                    placeholder="Min"
+                  />
                   <span>-</span>
-                  <input type="number" min={0} value={tempMaxPrice} onChange={(e) => setTempMaxPrice(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border rounded-md px-2 py-1" placeholder="Max"/>
+                  <input
+                    type="number"
+                    min={0}
+                    value={tempMaxPrice}
+                    onChange={(e) =>
+                      setTempMaxPrice(
+                        e.target.value === "" ? "" : Number(e.target.value)
+                      )
+                    }
+                    className="w-full border rounded-md px-2 py-1"
+                    placeholder="Max"
+                  />
                 </div>
               </div>
 
+              <div className="pt-4">
+                <h3 className="font-medium mb-2">Stock</h3>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={tempStockIn}
+                    onChange={(e) => setTempStockIn(e.target.checked)}
+                    className="form-checkbox"
+                  />
+                  In Stock
+                </label>
+              </div>
+
+              <div className="pt-4">
+                <h3 className="font-medium mb-2">Sort by Price</h3>
+                <select
+                  value={tempPriceSort}
+                  onChange={(e) =>
+                    setTempPriceSort(e.target.value as "low_to_high" | "high_to_low" | "")
+                  }
+                  className="w-full border rounded-md px-2 py-1"
+                >
+                  <option value="">Select</option>
+                  <option value="low_to_high">Low to High</option>
+                  <option value="high_to_low">High to Low</option>
+                </select>
+              </div>
+
+              <div className="pt-4">
+                <h3 className="font-medium mb-2">Delivery</h3>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={tempFreeDelivery}
+                    onChange={(e) => setTempFreeDelivery(e.target.checked)}
+                    className="form-checkbox"
+                  />
+                  Free Delivery
+                </label>
+              </div>
+
               <div className="flex gap-2 mt-4">
-                <button onClick={handleFilterApply} className="w-full bg-green-600 text-white text-sm py-1.5 rounded-md hover:bg-green-700 transition cursor-pointer">Apply Filters</button>
-                <button onClick={resetFilters} className="w-full bg-orange-500 text-white text-sm py-1.5 rounded-md hover:bg-orange-600 transition cursor-pointer">Reset</button>
+                <button
+                  onClick={handleFilterApply}
+                  className="w-full bg-amber-500 text-white text-sm py-1.5 rounded-md hover:bg-amber-600 transition cursor-pointer"
+                >
+                  Apply Filters
+                </button>
+                <button
+                  onClick={resetFilters}
+                  className="w-full bg-red-500 text-white text-sm py-1.5 rounded-md hover:bg-red-600 transition cursor-pointer"
+                >
+                  Reset
+                </button>
               </div>
             </div>
 
