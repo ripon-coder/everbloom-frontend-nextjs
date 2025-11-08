@@ -1,4 +1,3 @@
-// next.config.js
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -7,7 +6,13 @@ const nextConfig: NextConfig = {
       {
         protocol: "http",
         hostname: "localhost",
-        port: "9090",
+        port: "9096",
+        pathname: "/images/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "9096",
         pathname: "/storage/**",
       },
     ],
