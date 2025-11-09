@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     // Forward backend status code and full response
     return NextResponse.json(data, { status: response.status });
   } catch (err) {
-    console.error("add wishlist error:", err);
+    console.error("add user error:", err);
     return NextResponse.json(
       { status: false, message: "Internal Server Error" },
       { status: 500 }

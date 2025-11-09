@@ -131,7 +131,9 @@ export default function ProfilePage() {
 
   if (loading)
     return (
-      <div className="flex justify-center items-center py-4 px-5">{renderSkeleton()}</div>
+      <div className="flex justify-center items-center py-4 px-5">
+        {renderSkeleton()}
+      </div>
     );
   if (!user)
     return (
@@ -206,7 +208,9 @@ export default function ProfilePage() {
                   {field === "email" && (
                     <span
                       className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        user.email_verified_at ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"
+                        user.email_verified_at
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-200 text-gray-600"
                       }`}
                     >
                       {user.email_verified_at ? "Verified" : "Not Verified"}
@@ -215,7 +219,9 @@ export default function ProfilePage() {
                   {field === "phone" && (
                     <span
                       className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        user.phone_verified_at ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"
+                        user.phone_verified_at
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-200 text-gray-600"
                       }`}
                     >
                       {user.phone_verified_at ? "Verified" : "Not Verified"}

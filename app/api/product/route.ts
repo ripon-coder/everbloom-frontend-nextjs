@@ -1,20 +1,39 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function GET(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
     const { searchParams } = new URL(request.url);
     const apiUrl = new URL(`${API_BASE_URL}/product`);
 
-    // Forward all query parameters dynamically
-    searchParams.forEach((value, key) => {
-      if (!value) return;
 
-      // Pass brand and category as-is
-      apiUrl.searchParams.append(key, value);
+    searchParams.forEach((value, key) => {
+      if (value) apiUrl.searchParams.append(key, value);
     });
 
-    const response = await fetch(apiUrl.toString());
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    const fallbackCookie = request.headers.get("cookie");
+    if (!token && fallbackCookie) {
+      const match = fallbackCookie.match(/token=([^;]+)/);
+      if (match) {
+        headers.Authorization = `Bearer ${match[1]}`;
+      }
+    } else if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(apiUrl.toString(), {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch products: ${response.statusText}`);
@@ -23,7 +42,10 @@ export async function GET(request: Request) {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error in /api/products route:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("Error in /api/product route:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }

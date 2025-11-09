@@ -19,9 +19,7 @@ export default function ShopPage() {
   const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-
-  const [flashSale, setFlashSale] = useState<any[]>([]);
-
+  const [flashSale, setFlashSale] = useState<any | null>(null);
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isLoadingFilters, setIsLoadingFilters] = useState(true);
@@ -288,11 +286,15 @@ export default function ShopPage() {
         <title>{metaTitle}</title>
         <meta name="description" content={metaDescription} />
       </Head>
-          {/* fLASH SALE */}
-          <div className="md:col-span-1">
+
+      <div className="p-4 bg-gray-50 min-h-screen">
+        {/* 🔥 FLASH SALE */}
+        {flashSale && (
+          <div className="mb-6">
             <FlashSaleComponent slug={slug} flashSale={flashSale} />
           </div>
-      <div className="p-4 bg-gray-50 min-h-screen">
+        )}
+
         {/* Mobile Filter Button */}
         <div className="md:hidden flex justify-end mb-4">
           <button
@@ -422,8 +424,6 @@ export default function ShopPage() {
             </div>
           </div>
 
-
-
           {/* Products */}
           <div className="md:col-span-3">
             {products.length === 0 && !isLoadingProducts ? (
@@ -434,7 +434,7 @@ export default function ShopPage() {
                 </p>
               </div>
             ) : (
-              <ProductGrid products={products} isLoading={isLoadingProducts} />
+              <ProductGrid products={products} isLoading={isLoadingProducts} flashSaleSlug={slug} />
             )}
             {currentPage < totalPages && !isLoadingProducts && (
               <div className="flex justify-center mt-6">

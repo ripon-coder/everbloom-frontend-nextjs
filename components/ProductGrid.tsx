@@ -16,11 +16,13 @@ export interface Product {
 interface ProductGridProps {
   products: Product[];
   isLoading?: boolean;
+  flashSaleSlug?: string;
 }
 
 export default function ProductGrid({
   products,
   isLoading = false,
+  flashSaleSlug,
 }: ProductGridProps) {
   if (!Array.isArray(products)) {
     console.error("ProductGrid received a non-array products prop:", products);
@@ -32,6 +34,14 @@ export default function ProductGrid({
     );
   }
 
+  // Function to generate product link with optional flash sale parameter
+  const getProductLink = (productSlug: string) => {
+    if (flashSaleSlug) {
+      return `/product/${productSlug}?flashsale=${flashSaleSlug}`;
+    }
+    return `/product/${productSlug}`;
+  };
+
   return (
     <div className="p-4 bg-gray-100 min-h-screen">
       <h2 className="text-lg font-semibold text-gray-800 mb-4">Products</h2>
@@ -42,7 +52,7 @@ export default function ProductGrid({
           ))
         ) : (
           products.map((p) => (
-            <Link key={p.id} href={`/product/${p.slug}`}>
+            <Link key={p.id} href={getProductLink(p.slug)}>
               <div
                 key={p.id}
                 className="bg-white border overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300 cursor-pointer"

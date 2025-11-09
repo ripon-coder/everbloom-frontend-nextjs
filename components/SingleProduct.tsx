@@ -41,6 +41,9 @@ interface Product {
   variants?: Variant[];
   slug?: string;
   is_wishlisted?: boolean;
+  flash_sale_name?: string;
+  flash_sale_slug?: string;
+
 }
 
 interface Props {
@@ -242,6 +245,7 @@ export default function SingleProduct({ product }: Props) {
                   isInitiallyWishlisted={product.is_wishlisted}
                   className="w-7 h-7 ml-2" // bigger & slightly away
                 />
+                <h1>{product.is_wishlisted}</h1>
               </span>
             )}
           </div>
