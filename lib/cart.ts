@@ -7,7 +7,8 @@ export interface CartItem {
   name: string;
   price: number;
   image: string;
-  slug: string; // stored for reference
+  slug: string; 
+  flash_sale?: string;
 }
 
 /**
@@ -31,7 +32,8 @@ function safeParseCart(): CartItem[] {
         typeof item.name === "string" &&
         typeof item.price === "number" &&
         typeof item.image === "string" &&
-        typeof item.slug === "string"
+        typeof item.slug === "string" &&
+        (item.flash_sale === undefined || typeof item.flash_sale === "string")
     );
 
     if (validItems.length !== parsed.length) {

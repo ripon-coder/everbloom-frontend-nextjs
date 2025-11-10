@@ -1,4 +1,3 @@
-// Cart Page
 "use client";
 
 import Image from "next/image";
@@ -10,6 +9,7 @@ import { getCart, removeFromCart } from "@/lib/cart";
 import { setCheckoutItems } from "@/lib/checkout";
 
 interface LocalCartItem {
+  productId: number;
   variantId: number;
   quantity: number;
   image?: string;
@@ -17,6 +17,7 @@ interface LocalCartItem {
   sku?: string;
   price?: number;
   slug: string;
+  flash_sale?: string;
 }
 
 interface VariantAPI {
@@ -24,11 +25,14 @@ interface VariantAPI {
   product_id: number;
   sku: string;
   buying_price?: string | null;
-  sell_price: string;
+  sell_price?: string;
   discount_price: string;
   discount_amount?: string | null;
   stock: number;
   weight: string;
+  has_flash_sale?: boolean;
+  flash_sale?: string;
+  status: string;
   images: string[];
   attributes: {
     id: number;
@@ -58,18 +62,18 @@ export default function Cart() {
   const [cartLoaded, setCartLoaded] = useState(false);
 
   useEffect(() => {
-    const localCart = getCart() as LocalCartItem[];
+    const localCart = getCart() as unknown as LocalCartItem[];
     if (!localCart || localCart.length === 0) {
       setCartLoaded(true);
       return;
     }
 
-    // Initialize skeleton items
+    // Skeleton loading items
     const initialCart = localCart.map((item) => ({
       id: item.variantId,
-      product_id: 0,
+      product_id: item.productId,
       sku: "",
-      discount_price: String(item.price || 0), // <-- convert to string
+      discount_price: String(item.price || 0),
       sell_price: "0",
       stock: 1,
       weight: "0",
@@ -80,19 +84,25 @@ export default function Cart() {
       name: item.name,
       skuLocal: item.sku || "Unknown SKU",
       slug: item.slug,
+      flash_sale: item.flash_sale || undefined,
+      status: "inactive",
       isDisabled: false,
       isLoadingApi: true,
     }));
 
     setCartItems(initialCart);
 
-    const variantIds = localCart.map((item) => item.variantId);
+    // Request body for variant info
+    const variantRequestBody = localCart.map((item) => ({
+      product_id: item.productId,
+      variants_id: item.variantId,
+      flash_sale: item.flash_sale || null,
+    }));
 
-    // Fetch all variants in one POST request
     fetch("/api/variants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: variantIds }),
+      body: JSON.stringify(variantRequestBody),
     })
       .then((res) => res.json())
       .then((resData) => {
@@ -110,7 +120,9 @@ export default function Cart() {
                 quantity: ci.quantity,
                 fallbackImage: variant.images?.[0] || ci.fallbackImage,
                 skuLocal: ci.skuLocal || variant.sku,
-                isDisabled: variant.stock <= 0,
+                isDisabled:
+                  variant.stock <= 0 ||
+                  variant.status?.toLowerCase() !== "active",
                 isLoadingApi: false,
               };
             }
@@ -138,7 +150,6 @@ export default function Cart() {
             action === "inc"
               ? item.quantity + 1
               : Math.max(1, item.quantity - 1);
-
           return { ...item, quantity: newQty };
         }
         return item;
@@ -168,39 +179,42 @@ export default function Cart() {
 
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Cart Items */}
-        <div className="md:col-span-2 bg-white p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Shopping Cart</h2>
+        <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">
+              🛒 Shopping Cart
+            </h2>
             <Link href="/shop">
-              <button className="bg-amber-500 text-white text-sm py-1 px-2 rounded hover:bg-amber-600 transition cursor-pointer">
+              <button className="bg-amber-500 text-white text-sm py-2 px-3 rounded-md hover:bg-amber-600 transition cursor-pointer">
                 Continue Shopping
               </button>
             </Link>
           </div>
 
           {cartLoaded && cartItems.length === 0 ? (
-            <p className="text-gray-500 text-center py-10">
-              Your cart is empty 🛒
+            <p className="text-gray-500 text-center py-12 text-lg">
+              Your cart is empty 🛍️
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {cartItems.map((item) => {
                 const imageSrc = item.fallbackImage || "/placeholder.png";
                 const isStockExceeded = item.quantity > item.stock;
+
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-center justify-between border-2 rounded p-2 ${
-                      item.isDisabled ? "opacity-50" : ""
+                    className={`flex flex-col md:flex-row items-start md:items-center justify-between border rounded-xl p-4 transition-shadow ${
+                      item.isDisabled ? "opacity-50" : "shadow hover:shadow-md"
                     } ${
                       isStockExceeded && selectedItems.includes(item.id)
                         ? "border-red-500"
-                        : "border-transparent"
-                    }`}
+                        : "border-gray-200"
+                    } bg-white`}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-start gap-5">
                       <input
                         type="checkbox"
                         checked={selectedItems.includes(item.id)}
@@ -212,10 +226,11 @@ export default function Cart() {
                               : [...prev, item.id]
                           )
                         }
-                        className="mr-2 w-5 h-5 cursor-pointer"
+                        className="mt-2 w-5 h-5 cursor-pointer accent-orange-500"
                       />
+
                       <Link href={`/product/${item.slug}`}>
-                        <div className="relative w-20 h-20 rounded-md overflow-hidden border cursor-pointer">
+                        <div className="relative w-24 h-24 rounded-lg overflow-hidden border cursor-pointer">
                           {item.isLoadingApi ? (
                             <div className="w-full h-full bg-gray-200 animate-pulse rounded" />
                           ) : (
@@ -229,68 +244,55 @@ export default function Cart() {
                           )}
                         </div>
                       </Link>
-                      <div>
+
+                      <div className="space-y-1">
                         <Link href={`/product/${item.slug}`}>
-                          <h3 className="font-medium cursor-pointer hover:underline">
+                          <h3 className="font-semibold text-lg text-gray-800 cursor-pointer hover:text-orange-600">
                             {item.name || item.skuLocal}
                           </h3>
                         </Link>
 
-                        <p className="text-sm text-gray-600">
-                          SKU:{" "}
-                          {item.isLoadingApi ? (
-                            <span className="bg-gray-200 rounded w-24 h-3 inline-block animate-pulse" />
-                          ) : (
-                            item.sku || item.skuLocal || "Unknown SKU"
-                          )}
-                        </p>
+                        {item.has_flash_sale && (
+                          <p className="inline-block text-xs bg-red-100 text-red-600 px-2 py-[2px] rounded-full font-semibold">
+                            🔥 Flash Sale Active ({item.flash_sale || "N/A"})
+                          </p>
+                        )}
 
-                        <p className="text-sm text-gray-500">
-                          {item.isLoadingApi ? (
-                            <span className="bg-gray-200 rounded w-40 h-3 inline-block animate-pulse" />
-                          ) : item.attributes.length > 0 ? (
-                            item.attributes
+                        {item.attributes?.length > 0 && (
+                          <p className="text-sm text-gray-500">
+                            {item.attributes
                               .map(
                                 (a) =>
                                   `${a.attribute_name}: ${a.attribute_value}`
                               )
-                              .join(", ")
-                          ) : (
-                            "No attributes"
-                          )}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Stock:{" "}
-                          {item.isLoadingApi ? (
-                            <span className="bg-gray-200 rounded w-24 h-3 inline-block animate-pulse" />
-                          ) : (
-                            <span className="text-green-600">
-                              {item.stock || "Unknown Quantity"}
-                            </span>
-                          )}
-                        </p>
-                        {isStockExceeded &&
-                          selectedItems.includes(item.id) && (
-                            <p className="text-red-500 text-xs">
-                              Not enough stock.
-                            </p>
-                          )}
-                        <p className="text-orange-600 font-semibold">
-                          {item.isLoadingApi ? (
-                            <span className="bg-gray-200 rounded w-16 h-4 inline-block animate-pulse" />
-                          ) : (
-                            `৳ ${Number(item.discount_price)}`
-                          )}
-                        </p>
-                        {item.isDisabled && !item.isLoadingApi && (
-                          <p className="text-red-500 text-xs">
-                            Product not available
+                              .join(", ")}
                           </p>
+                        )}
+
+                        <p className="text-sm text-gray-600">
+                          SKU: {item.sku || item.skuLocal || "Unknown SKU"}
+                        </p>
+
+                        <p className="text-orange-600 text-xl font-bold">
+                          ৳ {Number(item.discount_price)}
+                        </p>
+
+                        {item.stock === 0 && !item.isLoadingApi ? (
+                          <p className="text-red-500 text-xs mt-1">
+                            Out of stock
+                          </p>
+                        ) : (
+                          selectedItems.includes(item.id) &&
+                          item.quantity > item.stock && (
+                            <p className="text-red-500 text-xs mt-1">
+                              Not enough stock available.
+                            </p>
+                          )
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 mt-4 md:mt-0">
                       <div className="flex items-center border rounded-md">
                         <button
                           onClick={() => updateQty(item.id, "dec")}
@@ -299,14 +301,12 @@ export default function Cart() {
                         >
                           -
                         </button>
-                        <span className="px-4">{item.quantity}</span>
+                        <span className="px-4 font-medium text-gray-700">
+                          {item.quantity}
+                        </span>
                         <button
                           onClick={() => updateQty(item.id, "inc")}
-                          className={`px-3 py-1 hover:bg-gray-100 ${
-                            item.isDisabled || item.isLoadingApi
-                              ? "cursor-not-allowed opacity-50"
-                              : ""
-                          }`}
+                          className="px-3 py-1 hover:bg-gray-100"
                           disabled={item.isDisabled || item.isLoadingApi}
                         >
                           +
@@ -327,13 +327,15 @@ export default function Cart() {
         </div>
 
         {/* Cart Summary */}
-        <div className="bg-white p-4 h-fit">
-          <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-          <div className="flex justify-between text-sm mb-2">
+        <div className="bg-white p-6 rounded-xl shadow-sm h-fit">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">
+            Order Summary
+          </h2>
+          <div className="flex justify-between text-sm mb-2 text-gray-600">
             <span>Subtotal</span>
             <span>৳ {subtotal}</span>
           </div>
-          <div className="flex justify-between font-semibold text-lg border-t pt-2">
+          <div className="flex justify-between font-semibold text-lg border-t pt-2 text-gray-800">
             <span>Total</span>
             <span>৳ {total}</span>
           </div>
@@ -355,12 +357,13 @@ export default function Cart() {
                   name: item.name || item.skuLocal || "Unknown Product",
                   quantity: item.quantity,
                   discount_price: Number(item.discount_price),
+                  flash_sale: item.flash_sale || undefined,
                 }));
 
               setCheckoutItems(checkoutData);
               router.push("/checkout");
             }}
-            className={`w-full mt-4 bg-orange-500 text-white py-3 rounded-lg font-medium hover:bg-orange-600 transition ${
+            className={`w-full mt-6 bg-orange-500 text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition ${
               selectedItems.length === 0 ||
               cartItems.some((item) => item.isLoadingApi) ||
               hasStockExceeded

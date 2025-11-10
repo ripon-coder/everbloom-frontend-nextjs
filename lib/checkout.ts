@@ -6,6 +6,7 @@ export interface CheckoutItem {
   name: string;
   discount_price?: number;
   quantity: number;
+  flash_sale?: string
 }
 
 const CHECKOUT_KEY = "checkout";

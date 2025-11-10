@@ -519,6 +519,7 @@ export default function SingleProduct({ product }: Props) {
                       price: Number(currentVariant.discount_price),
                       image: mainImage,
                       slug: product.slug ?? "",
+                      flash_sale: product.flash_sale_slug ?? "",
                     });
                   }}
                 >
