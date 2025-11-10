@@ -1,10 +1,10 @@
-// components/CheckoutForm.tsx
 "use client";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getCart, setCheckoutItems, CheckoutItem } from "@/lib/checkout";
-import {removeFromCart} from "@/lib/cart"
+import { removeFromCart } from "@/lib/cart";
 import toast from "react-hot-toast";
 
 interface Variant {
@@ -31,8 +31,6 @@ interface CheckoutVariant extends Variant {
 interface District {
   id: number;
   name: string;
-  delivery_charge?: number;
-  information?: string | null;
 }
 
 interface Address {
@@ -44,21 +42,13 @@ interface Address {
   address: string;
 }
 
-
 export default function CheckoutPage() {
   const router = useRouter();
 
-  const [checkoutItems, setCheckoutItemsState] = useState<CheckoutVariant[]>(
-    []
-  );
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">(
-    "cod"
-  );
-
+  const [checkoutItems, setCheckoutItemsState] = useState<CheckoutVariant[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">("cod");
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">(
-    "new"
-  );
+  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">("new");
   const [addressForm, setAddressForm] = useState({
     name: "",
     phone: "",
@@ -90,28 +80,26 @@ export default function CheckoutPage() {
     coupon_discount: 0,
     flash_discount: 0,
   });
+  const [flashSaleSlug, setFlashSaleSlug] = useState<string>("");
 
-  const paymentShortLabels: Record<"cod" | "bkash" | "card", string> = {
-    cod: "COD",
-    bkash: "bKash",
-    card: "Card",
-  };
-
-  const paymentFullLabels: Record<"cod" | "bkash" | "card", string> = {
+  const paymentShortLabels = { cod: "COD", bkash: "bKash", card: "Card" };
+  const paymentFullLabels = {
     cod: "Cash on Delivery",
     bkash: "bKash / Mobile Banking",
     card: "Credit / Debit Card",
   };
-  
 
-  // Fetch districts
+  // 🟩 Fetch Districts
   useEffect(() => {
     const fetchDistricts = async () => {
       setDistrictLoading(true);
       try {
         const res = await fetch("/api/district-list");
         const data = await res.json();
-        if (res.ok && data) setDistricts(data);
+        if (res.ok && data) {
+          if (Array.isArray(data)) setDistricts(data);
+          else if (data.data) setDistricts(data.data);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -121,7 +109,7 @@ export default function CheckoutPage() {
     fetchDistricts();
   }, []);
 
-  // Fetch address book
+  // 🟩 Fetch Addresses
   useEffect(() => {
     const fetchAddresses = async () => {
       setAddressLoading(true);
@@ -148,30 +136,22 @@ export default function CheckoutPage() {
     fetchAddresses();
   }, []);
 
-  // Update form when address selected
+  // 🟩 Load flash_sale slug from localStorage
   useEffect(() => {
-    if (selectedAddressId === "new") {
-      setAddressForm({
-        name: "",
-        phone: "",
-        district: "",
-        zone: "",
-        address: "",
-      });
-    } else {
-      const addr = savedAddresses.find((a) => a.id === selectedAddressId);
-      if (addr) setAddressForm(addr);
+    if (typeof window !== "undefined") {
+      const checkoutLocal = localStorage.getItem("checkout");
+      if (checkoutLocal) {
+        try {
+          const parsed = JSON.parse(checkoutLocal);
+          if (parsed && parsed.flash_sale) setFlashSaleSlug(parsed.flash_sale);
+        } catch {
+          console.warn("Invalid checkout JSON");
+        }
+      }
     }
-    setAddressErrors({
-      name: "",
-      phone: "",
-      district: "",
-      zone: "",
-      address: "",
-    });
-  }, [selectedAddressId, savedAddresses]);
+  }, []);
 
-  // Load checkout items
+  // 🟩 Load Checkout Items + Variants
   useEffect(() => {
     const localCart = getCart();
     if (!localCart || localCart.length === 0) {
@@ -179,20 +159,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    const localSubtotal = localCart.reduce(
-      (sum, item) => sum + Number(item.discount_price || 0) * item.quantity,
-      0
-    );
-
-    setCheckoutTotals({
-      subtotal: localSubtotal,
-      shipping: 0,
-      total: localSubtotal,
-      coupon_discount: 0,
-      flash_discount: 0,
-    });
-
-    const placeholders: CheckoutVariant[] = localCart.map((item, index) => ({
+    const placeholders: CheckoutVariant[] = localCart.map((item, i) => ({
       id: item.variant_id,
       product_id: item.productId,
       discount_price: "0",
@@ -200,101 +167,85 @@ export default function CheckoutPage() {
       stock: 0,
       weight: "0",
       status: "inactive",
-      images: [],
-      attributes: [],
       quantity: item.quantity,
       fallbackImage: "",
       name: item.name,
+      attributes: [],
+      images: [],
       isDisabled: false,
       isLoadingPrice: true,
-      key: `${item.variant_id}-${index}`,
+      key: `${item.variant_id}-${i}`,
     }));
 
     setCheckoutItemsState(placeholders);
 
-    const variantIds = localCart.map((item) => item.variant_id);
+    const variantPayload = localCart.map((item) => ({
+      product_id: String(item.productId),
+      variants_id: String(item.variant_id),
+      ...(flashSaleSlug ? { flash_sale: flashSaleSlug } : {}),
+    }));
 
     fetch("/api/variants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: variantIds }),
+      body: JSON.stringify(variantPayload),
     })
       .then((res) => res.json())
       .then((resData) => {
-        if (!resData.status || !resData.data)
-          throw new Error("No variants found");
+        if (!resData.status || !resData.data) throw new Error("No variants found");
 
         const variants: Variant[] = resData.data;
-        const updatedItems: CheckoutVariant[] = placeholders.map(
-          (ci, index) => {
-            const variant = variants.find((v) => v.id === ci.id);
-            if (variant) {
-              return {
+        const updated = placeholders.map((ci) => {
+          const v = variants.find((v) => v.id === ci.id);
+          return v
+            ? {
                 ...ci,
-                ...variant,
-                discount_price: variant.discount_price || variant.sell_price,
-                sell_price: variant.sell_price,
-                fallbackImage: variant.images?.[0] || "",
-                isDisabled: variant.stock <= 0,
+                ...v,
+                discount_price: v.discount_price || v.sell_price,
+                fallbackImage: v.images?.[0] || "",
+                isDisabled: v.stock <= 0,
                 isLoadingPrice: false,
-                key: `${ci.id}-${index}`,
-              };
-            }
-            return {
-              ...ci,
-              isDisabled: true,
-              isLoadingPrice: false,
-              key: `${ci.id}-${index}`,
-            };
-          }
-        );
+              }
+            : { ...ci, isDisabled: true, isLoadingPrice: false };
+        });
 
-        setCheckoutItemsState(updatedItems);
+        setCheckoutItemsState(updated);
 
-        const initialSubtotal = updatedItems.reduce(
+        const subtotal = updated.reduce(
           (sum, item) => sum + Number(item.discount_price) * item.quantity,
           0
         );
 
         setCheckoutTotals({
-          subtotal: initialSubtotal,
+          subtotal,
           shipping: 0,
-          total: initialSubtotal,
+          total: subtotal,
           coupon_discount: 0,
           flash_discount: 0,
         });
-
-        const itemsToSave: CheckoutItem[] = updatedItems
-          .filter((item) => !item.isDisabled)
-          .map((item) => ({
-            variant_id: item.id,
-            productId: item.product_id,
-            name: item.name || "",
-            quantity: item.quantity,
-            discount_price: Number(item.discount_price),
-          }));
-        setCheckoutItems(itemsToSave);
       })
-      .catch((err) => console.error(err));
-  }, []);
+      .catch(console.error);
+  }, [flashSaleSlug]);
 
-  // Recalculate totals
+  // 🟩 Recalculate Totals
   const recalculateCheckout = async (
     items = checkoutItems,
     coupon = couponCode,
     districtName = addressForm.district
   ) => {
     setCouponMessage("");
+    if (!districtName) return;
+
     const district = districts.find(
       (d) => d.name.toLowerCase() === districtName.toLowerCase()
     );
     if (!district) return;
 
-    const product_list = items.map((item) => ({
-      product_id: String(item.product_id),
-      variant_id: String(item.id),
-      quantity: String(item.quantity),
-      flash_sale: "",
+    const product_list = items.map((i) => ({
+      product_id: String(i.product_id),
+      variant_id: String(i.id),
+      quantity: String(i.quantity),
+      flash_sale: flashSaleSlug || "",
     }));
 
     try {
@@ -323,7 +274,7 @@ export default function CheckoutPage() {
         if (coupon && d.coupon_discount_amount <= 0)
           setCouponMessage(`❌ Coupon Failed (${coupon})`);
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to update totals");
     } finally {
       setShippingLoading(false);
@@ -331,101 +282,55 @@ export default function CheckoutPage() {
     }
   };
 
+  // ✅ Auto Recalculate when District changes
+  useEffect(() => {
+    if (!addressForm.district) return;
+    if (checkoutItems.length === 0) return;
+
+    const timeout = setTimeout(() => {
+      recalculateCheckout(checkoutItems, couponCode, addressForm.district);
+    }, 400); // debounce for smooth updates
+
+    return () => clearTimeout(timeout);
+  }, [addressForm.district, checkoutItems, couponCode]);
+
+  // 🟩 Apply Coupon
   const applyCoupon = async () => {
     if (!couponCode)
       return setCouponMessage("Please enter a coupon code first.");
     if (addressForm.district === "")
-      return toast.error("Add your address before applying a coupon.", {
-        duration: 4000,
-        style: { whiteSpace: "nowrap", maxWidth: "none", fontSize: "14px" },
-      });
+      return toast.error("Add your address before applying a coupon.");
 
     setCouponLoading(true);
-    const promise = recalculateCheckout(
-      checkoutItems,
-      couponCode,
-      addressForm.district
-    );
+    const promise = recalculateCheckout(checkoutItems, couponCode, addressForm.district);
     toast.promise(promise, {
       loading: "Applying Coupon...",
-      success: "Coupon Status updated successfully!",
-      error: "Failed to apply coupon. Please try again.",
+      success: "Coupon checked successfully!",
+      error: "Failed to apply coupon!",
     });
   };
 
-  useEffect(() => {
-    if (addressForm.district && checkoutItems.length > 0)
-      recalculateCheckout(checkoutItems, couponCode, addressForm.district);
-  }, [addressForm.district]);
-
-  // Place order with validation
+  // 🟩 Place Order
   const placeOrder = async () => {
-    const errors: typeof addressErrors = {
-      name: "",
-      phone: "",
-      district: "",
-      zone: "",
-      address: "",
-    };
-    let hasError = false;
+    if (!addressForm.name || !addressForm.phone || !addressForm.district)
+      return toast.error("Please fill all required fields");
 
-    if (!addressForm.name) {
-      errors.name = "Name is required";
-      hasError = true;
-    }
-    if (!addressForm.phone) {
-      errors.phone = "Phone is required";
-      hasError = true;
-    }
-    if (!addressForm.district) {
-      errors.district = "District is required";
-      hasError = true;
-    }
-    if (!addressForm.zone) {
-      errors.zone = "Zone is required";
-      hasError = true;
-    }
-    if (!addressForm.address) {
-      errors.address = "Address is required";
-      hasError = true;
-    }
-
-    setAddressErrors(errors);
-
-    if (hasError) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-
-    // Build product_list
-    const product_list = checkoutItems
-      .filter((item) => !item.isDisabled)
-      .map((item) => ({
-        product_id: String(item.product_id),
-        variant_id: String(item.id),
-        quantity: String(item.quantity),
-        flash_sale: "", // You can replace with actual flash sale if any
-      }));
-
-    // Find district ID
     const district = districts.find(
       (d) => d.name.toLowerCase() === addressForm.district.toLowerCase()
     );
-    if (!district) {
-      toast.error("Invalid district selected");
-      return;
-    }
-    if (product_list.length === 0) {
-      toast.error("Your cart is empty!");
-      return;
-    }
+    if (!district) return toast.error("Invalid district selected");
 
-    // Build payload
+    const product_list = checkoutItems.map((i) => ({
+      product_id: String(i.product_id),
+      variant_id: String(i.id),
+      quantity: String(i.quantity),
+      flash_sale: flashSaleSlug || "",
+    }));
+
     const payload = {
       product_list,
       coupon_code: couponCode || "",
-      payment_status: paymentMethod === "cod" ? "pending" : "paid", // adjust if needed
-      notes: "",
+      payment_status: paymentMethod === "cod" ? "pending" : "paid",
       shipping_address: {
         name: addressForm.name,
         phone_number: addressForm.phone,
@@ -434,6 +339,7 @@ export default function CheckoutPage() {
         address: addressForm.address,
       },
     };
+
     setOrderLoading(true);
     try {
       await toast.promise(
@@ -443,27 +349,19 @@ export default function CheckoutPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
-
           const data = await res.json();
-          if (!res.ok || !data.status) {
-            throw new Error(data.message || "Failed to place order");
-          }
-          removeFromCart
-          // Clear cart and redirect
-          setCheckoutItemsState([]);
-          setCheckoutItems([]);
+          if (!res.ok || !data.status)
+            throw new Error(data.message || "Failed");
+          checkoutItems.forEach((i) => removeFromCart(i.id));
           router.push("/order-success");
-
-          return data;
         })(),
         {
-          loading: "Placing your order...",
+          loading: "Placing order...",
           success: "Order placed successfully!",
-          error: (err) => err.message || "Failed to place order",
+          error: "Failed to place order!",
         }
       );
-    } catch (err) {
-      console.error(err);
+    } finally {
       setOrderLoading(false);
     }
   };
@@ -620,14 +518,6 @@ export default function CheckoutPage() {
                   onChange={(e) => setCouponCode(e.target.value)}
                   className="border p-3 rounded flex-1 pr-8"
                 />
-                {couponCode && (
-                  <span
-                    className="absolute right-12 top-3 cursor-pointer text-gray-400 hover:text-gray-700"
-                    onClick={() => setCouponCode("")}
-                  >
-                    ✕
-                  </span>
-                )}
                 <button
                   onClick={applyCoupon}
                   className="bg-amber-500 text-white px-4 py-3 rounded hover:bg-amber-600 transition text-sm cursor-pointer"
