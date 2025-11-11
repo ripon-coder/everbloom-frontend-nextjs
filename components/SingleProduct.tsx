@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { addToCart } from "@/lib/cart";
 import { toast } from "react-hot-toast";
 import { clearCheckout, addToCheckout } from "@/lib/checkout";
-import { Heart } from "lucide-react";
 import WishlistButton from "@/components/WishlistButton";
 
 // Types
@@ -54,20 +53,26 @@ interface Props {
 export default function SingleProduct({ product }: Props) {
   const router = useRouter();
   const firstVariant = product?.variants?.[0] || null;
+
+  // ✅ Default variant & attributes selected
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
     firstVariant
   );
   const [selectedAttributes, setSelectedAttributes] = useState<
     Record<string, string>
-  >({});
+  >(
+    () =>
+      firstVariant?.attributes?.reduce((acc, attr) => {
+        acc[attr.attribute_name] = attr.attribute_value;
+        return acc;
+      }, {} as Record<string, string>) || {}
+  );
+
   const [mainImage, setMainImage] = useState(
     firstVariant?.images?.[0] || product?.images?.[0] || "/placeholder.png"
   );
   const [quantity, setQuantity] = useState(1);
   const imageContainerRef = useRef<HTMLDivElement>(null);
-
-  // Wishlist state
-  const [isWishlisted, setIsWishlisted] = useState(false);
 
   // Zoom logic
   const [isZoomed, setIsZoomed] = useState(false);
@@ -82,7 +87,7 @@ export default function SingleProduct({ product }: Props) {
     seconds: number;
   } | null>(null);
 
-  // Calculate time remaining for flash sale
+  // Flash sale countdown
   useEffect(() => {
     if (!product.flash_sale_end_date) return;
 
@@ -91,44 +96,40 @@ export default function SingleProduct({ product }: Props) {
       const now = new Date().getTime();
       const difference = endDate - now;
 
-      if (difference <= 0) {
-        return null; // Flash sale has ended
-      }
+      if (difference <= 0) return null;
 
       return {
         days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        hours: Math.floor(
+          (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+        ),
         minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
         seconds: Math.floor((difference % (1000 * 60)) / 1000),
       };
     };
 
-    // Initial calculation
     setTimeLeft(calculateTimeLeft());
-
-    // Update every second
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 1000);
-
-    // Clean up interval
+    const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
     return () => clearInterval(timer);
   }, [product.flash_sale_end_date]);
 
-  // Calculate progress percentage
+  // Flash sale progress bar
   const calculateProgress = () => {
-    if (!product.flash_sale_start_date || !product.flash_sale_end_date || !timeLeft) return 0;
-    
+    if (
+      !product.flash_sale_start_date ||
+      !product.flash_sale_end_date ||
+      !timeLeft
+    )
+      return 0;
     const startDate = new Date(product.flash_sale_start_date).getTime();
     const endDate = new Date(product.flash_sale_end_date).getTime();
     const now = new Date().getTime();
-    
     const totalDuration = endDate - startDate;
     const elapsed = now - startDate;
-    
     return Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
   };
 
+  // Image zoom handlers
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = imageContainerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -137,14 +138,14 @@ export default function SingleProduct({ product }: Props) {
   const handleMouseEnter = () => setIsZoomed(true);
   const handleMouseLeave = () => setIsZoomed(false);
 
-  // Quantity
+  // Quantity handlers
   const incrementQty = () =>
     selectedVariant &&
     quantity < selectedVariant.stock &&
-    setQuantity((prev) => prev + 1);
-  const decrementQty = () => quantity > 1 && setQuantity((prev) => prev - 1);
+    setQuantity((p) => p + 1);
+  const decrementQty = () => quantity > 1 && setQuantity((p) => p - 1);
 
-  // Attribute logic - Updated to allow deselection
+  // Attribute select logic
   const findMatchingVariant = (attrs: Record<string, string>) =>
     product?.variants?.find((variant) =>
       Object.entries(attrs).every(([name, value]) =>
@@ -155,24 +156,20 @@ export default function SingleProduct({ product }: Props) {
     ) || null;
 
   const handleAttributeSelect = (attrName: string, attrValue: string) => {
-    // Check if this attribute is already selected
     const isCurrentlySelected = selectedAttributes[attrName] === attrValue;
-    
+
     let updatedAttrs;
     if (isCurrentlySelected) {
-      // Deselect the attribute
       updatedAttrs = { ...selectedAttributes };
       delete updatedAttrs[attrName];
     } else {
-      // Select or change the attribute
       updatedAttrs = { ...selectedAttributes, [attrName]: attrValue };
     }
 
     setSelectedAttributes(updatedAttrs);
 
-    // Try to find a matching variant with the updated attributes
     const matchedVariant = findMatchingVariant(updatedAttrs);
-    
+
     if (matchedVariant) {
       setSelectedVariant(matchedVariant);
       setMainImage(
@@ -180,7 +177,6 @@ export default function SingleProduct({ product }: Props) {
       );
       setQuantity(1);
     } else {
-      // If no variant matches, reset to the first variant
       setSelectedVariant(firstVariant);
       setMainImage(
         firstVariant?.images?.[0] || product.images?.[0] || "/placeholder.png"
@@ -189,6 +185,7 @@ export default function SingleProduct({ product }: Props) {
     }
   };
 
+  // Collect attributes list
   const allAttributes = useMemo(() => {
     const attrMap: Record<string, Set<string>> = {};
     product?.variants?.forEach((v) =>
@@ -301,81 +298,11 @@ export default function SingleProduct({ product }: Props) {
         <div className="flex flex-col gap-4">
           <h1 className="text-2xl font-semibold">{product.name}</h1>
           <p className="text-gray-700">{product.short_description}</p>
+
           {currentVariant?.sku && (
             <p className="text-sm text-gray-600">
               <span className="font-medium">SKU:</span> {currentVariant.sku}
             </p>
-          )}
-
-          {/* Flash Sale Badge with Timer */}
-          {product.flash_sale_name && (
-            <div className="mb-2">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="bg-red-500 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd" />
-                  </svg>
-                  {product.flash_sale_name}
-                </div>
-                <span className="text-xs text-red-500 font-medium">Limited Time Offer</span>
-              </div>
-              
-              {/* Countdown Timer - Compact Format */}
-              {timeLeft ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
-                  <div className="flex flex-col items-center">
-                    <span className="text-sm font-medium text-red-700 mb-2">Flash sale ends in:</span>
-                    
-                    {/* Timer Units */}
-                    <div className="flex gap-1 mb-2">
-                      {timeLeft.days > 0 && (
-                        <div className="flex flex-col items-center">
-                          <div className="bg-red-500 text-white rounded w-8 h-8 flex items-center justify-center text-xs font-bold">
-                            {timeLeft.days.toString().padStart(2, '0')}
-                          </div>
-                          <div className="text-xs text-red-600 mt-1">d</div>
-                        </div>
-                      )}
-                      
-                      {timeLeft.days > 0 || timeLeft.hours > 0 ? (
-                        <div className="flex flex-col items-center">
-                          <div className="bg-red-500 text-white rounded w-8 h-8 flex items-center justify-center text-xs font-bold">
-                            {timeLeft.hours.toString().padStart(2, '0')}
-                          </div>
-                          <div className="text-xs text-red-600 mt-1">h</div>
-                        </div>
-                      ) : null}
-                      
-                      <div className="flex flex-col items-center">
-                        <div className="bg-red-500 text-white rounded w-8 h-8 flex items-center justify-center text-xs font-bold">
-                          {timeLeft.minutes.toString().padStart(2, '0')}
-                        </div>
-                        <div className="text-xs text-red-600 mt-1">m</div>
-                      </div>
-                      
-                      <div className="flex flex-col items-center">
-                        <div className="bg-red-500 text-white rounded w-8 h-8 flex items-center justify-center text-xs font-bold">
-                          {timeLeft.seconds.toString().padStart(2, '0')}
-                        </div>
-                        <div className="text-xs text-red-600 mt-1">s</div>
-                      </div>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="w-full bg-red-200 rounded-full h-1.5">
-                      <div 
-                        className="bg-red-500 h-1.5 rounded-full transition-all duration-1000 ease-linear" 
-                        style={{ width: `${calculateProgress()}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
-                  <div className="text-center text-sm font-medium text-red-700">Flash sale has ended</div>
-                </div>
-              )}
-            </div>
           )}
 
           {/* Price + Wishlist */}
@@ -383,13 +310,11 @@ export default function SingleProduct({ product }: Props) {
             <span className="text-3xl font-bold text-orange-600">
               ৳ {currentVariant?.discount_price}
             </span>
-
             {currentVariant?.discount_price !== currentVariant?.sell_price && (
               <span className="text-gray-400 line-through text-xl">
                 ৳ {currentVariant?.sell_price}
               </span>
             )}
-            
             <WishlistButton
               productId={product.id}
               isInitiallyWishlisted={product.is_wishlisted}
@@ -434,42 +359,16 @@ export default function SingleProduct({ product }: Props) {
           </div>
 
           {/* Stock Info */}
-          <div className="flex items-center gap-4 mt-2">
-            <p className="text-sm">
-              <span className="font-medium">Stock:</span>{" "}
-              {inStock ? (
-                <span className="text-green-600">
-                  {currentVariant?.stock} available
-                </span>
-              ) : (
-                <span className="text-red-500">Out of stock</span>
-              )}
-            </p>
-
-            {product.is_free_delivery && (
-              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold border border-green-200">
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3 10h2l3 9h8l3-9h2"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16 16v4m-8-4v4"
-                  />
-                </svg>
-                Free Delivery
-              </div>
+          <p className="text-sm mt-2">
+            <span className="font-medium">Stock:</span>{" "}
+            {inStock ? (
+              <span className="text-green-600">
+                {currentVariant?.stock} available
+              </span>
+            ) : (
+              <span className="text-red-500">Out of stock</span>
             )}
-          </div>
+          </p>
 
           {/* Quantity */}
           {currentVariant && inStock && (
@@ -503,12 +402,10 @@ export default function SingleProduct({ product }: Props) {
             {inStock ? (
               <>
                 <Button
-                  className="flex-1 bg-orange-500 text-white hover:bg-orange-600 cursor-pointer"
+                  className="flex-1 bg-orange-500 text-white hover:bg-orange-600"
                   onClick={() => {
                     if (!currentVariant || !allAttributesSelected) {
-                      toast.error("Please select all product options", {
-                        id: "attr-error",
-                      });
+                      toast.error("Please select all product options");
                       return;
                     }
                     addToCart({
@@ -527,12 +424,10 @@ export default function SingleProduct({ product }: Props) {
                 </Button>
 
                 <Button
-                  className="flex-1 border border-orange-500 text-orange-500 hover:bg-orange-50 cursor-pointer"
+                  className="flex-1 border border-orange-500 text-orange-500 hover:bg-orange-50"
                   onClick={() => {
                     if (!currentVariant || !allAttributesSelected) {
-                      toast.error("Please select all product options", {
-                        id: "attr-error",
-                      });
+                      toast.error("Please select all product options");
                       return;
                     }
                     clearCheckout();
@@ -551,7 +446,7 @@ export default function SingleProduct({ product }: Props) {
                 </Button>
               </>
             ) : (
-              <Button className="flex-1 bg-gray-500 text-white hover:bg-gray-600 cursor-pointer">
+              <Button className="flex-1 bg-gray-500 text-white hover:bg-gray-600">
                 Request Stock
               </Button>
             )}
