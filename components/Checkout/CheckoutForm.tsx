@@ -27,6 +27,7 @@ export default function CheckoutPage() {
     setCheckoutTotals,
     districts,
     districtLoading,
+    variantLoading ,
   } = useCheckout();
 
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">(
@@ -253,12 +254,6 @@ export default function CheckoutPage() {
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
         {/* LEFT SECTION */}
         <div className="md:w-2/3 bg-white p-6 rounded-lg shadow space-y-6">
-          
-          <div className="flex items-center gap-2 p-3 mt-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium animate-fade-in">
-            After fill-up your shipping address, all shipping charges, discounts
-            (including Flash Sale & Coupon) have been applied successfully!
-          </div>
-
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold">Shipping Information</h2>
             <Link
@@ -327,6 +322,7 @@ export default function CheckoutPage() {
             placeOrder={placeOrder}
             paymentLabel={paymentShortLabels[paymentMethod]}
             orderLoading={orderLoading}
+            variantLoading ={variantLoading}
           />
         </div>
       </div>

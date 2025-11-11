@@ -11,6 +11,7 @@ export interface Variant {
   product_id: number;
   sell_price: string;
   discount_price: any;
+  discount_price_cart: any;
   stock: number;
   weight: string;
   status: string;
@@ -48,6 +49,7 @@ export const useCheckout = () => {
   const [checkoutItems, setCheckoutItems] = useState<CheckoutVariant[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [districtLoading, setDistrictLoading] = useState(false);
+  const [variantLoading, setVariantLoading] = useState(false);
   const [checkoutTotals, setCheckoutTotals] = useState({
     subtotal: 0,
     shipping: 0,
@@ -86,12 +88,13 @@ export const useCheckout = () => {
         router.push("/cart");
         return;
       }
-
+      setVariantLoading(true);
       // Create placeholders
       const placeholders: CheckoutVariant[] = localCart.map((item, i) => ({
         id: item.variant_id,
         product_id: item.productId,
         discount_price: "0",
+        discount_price_cart: "0", // Added missing property
         sell_price: "0",
         stock: 0,
         weight: "0",
@@ -146,7 +149,7 @@ export const useCheckout = () => {
         setCheckoutItems(updated);
 
         const subtotal = updated.reduce(
-          (sum, item) => sum + Number(item.discount_price) * item.quantity,
+          (sum, item) => sum + Number(item.discount_price_cart) * item.quantity,
           0
         );
 
@@ -160,6 +163,8 @@ export const useCheckout = () => {
       } catch (err) {
         console.error("Variant fetch error:", err);
         toast.error("Failed to load product variants");
+      } finally {
+        setVariantLoading(false);
       }
     };
 
@@ -174,5 +179,6 @@ export const useCheckout = () => {
     setCheckoutTotals,
     districts,
     districtLoading,
+    variantLoading,
   };
 };
