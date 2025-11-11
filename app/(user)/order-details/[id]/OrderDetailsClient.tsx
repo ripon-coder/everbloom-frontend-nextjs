@@ -56,8 +56,6 @@ export default function OrderDetailsPage() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Track which images have finished loading
   const [loadedImages, setLoadedImages] = useState<{ [key: number]: boolean }>({});
 
   const fetchOrder = async (orderId: string) => {
@@ -69,11 +67,8 @@ export default function OrderDetailsPage() {
         body: JSON.stringify({ order_id: orderId }),
       });
       const data = await res.json();
-      if (data.status && data.data) {
-        setOrder(data.data);
-      } else {
-        setOrder(null);
-      }
+      if (data.status && data.data) setOrder(data.data);
+      else setOrder(null);
     } catch (err) {
       console.error(err);
       setOrder(null);
@@ -87,58 +82,20 @@ export default function OrderDetailsPage() {
   }, [id]);
 
   const downloadInvoice = () => {
-    alert("Invoice Downloaded! (Implement actual download logic)");
+    alert("🧾 Invoice downloaded successfully! (Attach real logic here)");
   };
 
-  // Skeleton loader component
   const Skeleton = ({ className }: { className?: string }) => (
     <div className={`bg-gray-300 rounded animate-pulse ${className}`} />
   );
 
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen p-4">
-        <div className="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow space-y-6">
-          {/* Header skeleton */}
-          <div className="flex justify-between items-center">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-            <Skeleton className="h-10 w-40" />
-          </div>
-
-          {/* Products skeleton */}
-          <div className="space-y-4">
-            {[1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-4 border-b pb-4">
-                <Skeleton className="w-24 h-24" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-32" />
-                  <Skeleton className="h-3 w-40" />
-                  <Skeleton className="h-4 w-20" />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Order summary skeleton */}
-          <div className="p-4 border rounded-md bg-gray-50 space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-4 w-20" />
-          </div>
-
-          {/* Address skeleton */}
-          <div className="p-4 border rounded-md bg-gray-50 space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-48" />
-            <Skeleton className="h-4 w-36" />
-          </div>
+      <div className="bg-gray-50 min-h-screen p-6">
+        <div className="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow-lg space-y-6">
+          <Skeleton className="h-5 w-64" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
       </div>
     );
@@ -148,21 +105,23 @@ export default function OrderDetailsPage() {
     return <p className="text-center mt-10 text-red-500">Order not found</p>;
 
   return (
-    <div className="bg-gray-50 min-h-screen p-4">
-      <div className="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow">
-        {/* Order Header */}
-        <div className="flex justify-between items-center mb-6">
+    <div className="bg-gray-50 min-h-screen p-4 md:p-8">
+      <div className="max-w-5xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-100">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 border-b pb-4 mb-6">
           <div>
             <p className="text-gray-500 text-sm">
-              Order ID: {order.order_number}
+              <span className="font-semibold text-gray-700">Order ID:</span>{" "}
+              {order.order_number}
             </p>
             <p className="text-gray-500 text-sm">
-              Order Date: {new Date(order.created_at).toLocaleDateString()}
+              <span className="font-semibold text-gray-700">Order Date:</span>{" "}
+              {new Date(order.created_at).toLocaleDateString()}
             </p>
             <p className="text-sm mt-1">
               Status:{" "}
               <span
-                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${
                   order.status === "pending"
                     ? "bg-yellow-100 text-yellow-800"
                     : order.status === "delivered"
@@ -176,26 +135,30 @@ export default function OrderDetailsPage() {
               </span>
             </p>
           </div>
+
           <button
             onClick={downloadInvoice}
-            className="flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded-md hover:bg-amber-600 transition"
+            className="flex items-center justify-center gap-2 bg-amber-500 text-white px-5 py-2.5 rounded-lg hover:bg-amber-600 transition-all duration-200 shadow-sm hover:shadow-md"
           >
-            <FiDownload /> Download Invoice
+            <FiDownload className="text-lg" /> Download Invoice
           </button>
         </div>
 
         {/* Products */}
-        {order.orderProducts?.length ? (
-          <div className="space-y-4 mb-6">
-            {order.orderProducts.map((p) => (
-              <div key={p.id} className="flex items-center gap-4 border-b pb-4">
-                <div className="w-24 h-24 relative overflow-hidden rounded">
+        <div className="mb-6 space-y-5">
+          {order.orderProducts?.length ? (
+            order.orderProducts.map((p) => (
+              <div
+                key={p.id}
+                className="flex flex-col sm:flex-row items-start sm:items-center gap-4 border border-gray-100 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200"
+              >
+                <div className="relative w-full sm:w-28 h-28 overflow-hidden rounded-md bg-gray-100">
                   <Image
                     loader={customImageLoader}
                     src={p.image || "/placeholder.png"}
                     alt={p.product_name}
                     fill
-                    className={`object-cover rounded transition-all duration-500 ease-in-out ${
+                    className={`object-cover transition-all duration-500 ${
                       loadedImages[p.id] ? "blur-0" : "blur-sm"
                     }`}
                     onLoadingComplete={() =>
@@ -203,92 +166,115 @@ export default function OrderDetailsPage() {
                     }
                   />
                 </div>
-                <div className="flex-1">
-                  <h2 className="font-medium text-gray-800">{p.product_name}</h2>
+
+                <div className="flex-1 w-full">
+                  <h2 className="font-semibold text-gray-800">
+                    {p.product_name}
+                  </h2>
                   <p className="text-gray-500 text-sm mt-1">
                     SKU: {p.productVariant?.sku || "N/A"}
                   </p>
-                  <div className="text-gray-500 text-sm flex flex-wrap gap-2 mt-1">
+
+                  {/* Attributes */}
+                  <div className="flex flex-wrap gap-2 mt-1">
                     {p.productVariant?.attributes?.map((attr, idx) => (
                       <span
                         key={idx}
-                        className="px-2 py-1 bg-gray-100 rounded text-xs"
+                        className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
                       >
                         {attr.attribute_name}: {attr.attribute_value}
                       </span>
-                    )) || null}
+                    ))}
                   </div>
-                  <p className="text-gray-500 text-sm mt-1">Quantity: {p.quantity}</p>
-                  <p className="text-amber-500 font-semibold">৳{p.total_price}</p>
+
+                  <div className="flex justify-between items-center mt-2">
+                    <p className="text-gray-600 text-sm">
+                      Qty: <span className="font-semibold">{p.quantity}</span>
+                    </p>
+                    <p className="text-amber-600 font-semibold text-lg">
+                      ৳{p.total_price}
+                    </p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-6">
-            No products in this order.
-          </p>
-        )}
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-6">
+              No products in this order.
+            </p>
+          )}
+        </div>
 
         {/* Order Summary */}
-        <div className="mb-6 p-4 border rounded-md bg-gray-50">
-          <h3 className="font-semibold text-gray-800 mb-2">Order Summary</h3>
-          <div className="flex justify-between py-1">
-            <span className="text-gray-600">Subtotal:</span>
-            <span>৳{order.subtotal}</span>
-          </div>
-          <div className="flex justify-between py-1">
-            <span className="text-gray-600">Shipping Fee:</span>
-            <span>৳{order.shipping_amount}</span>
-          </div>
-          {Number(order.coupon_discount_amount) > 0 && (
-            <div className="flex justify-between py-1">
-              <span className="text-gray-600">Coupon Discount:</span>
-              <span className="text-red-500">
-                -৳{order.coupon_discount_amount}
+        <div className="p-5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 shadow-sm mb-6">
+          <h3 className="font-semibold text-gray-800 mb-3 text-lg border-b pb-2">
+            Order Summary
+          </h3>
+
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Subtotal</span>
+              <span className="font-medium text-gray-800">
+                ৳{order.subtotal}
               </span>
             </div>
-          )}
-          {Number(order.flash_discount_amount) > 0 && (
-            <div className="flex justify-between py-1">
-              <span className="text-gray-600">Flash Sale Discount:</span>
-              <span className="text-red-500">
-                -৳{order.flash_discount_amount}
+
+            <div className="flex justify-between">
+              <span className="text-gray-600">Shipping Fee</span>
+              <span className="font-medium text-gray-800">
+                ৳{order.shipping_amount}
               </span>
             </div>
-          )}
-          <div className="flex justify-between py-2 border-t font-semibold text-gray-800">
-            <span>Total:</span>
-            <span>৳{order.total_amount}</span>
+
+            {Number(order.coupon_discount_amount) > 0 && (
+              <div className="flex justify-between text-red-600">
+                <span>Coupon Discount</span>
+                <span>-৳{order.coupon_discount_amount}</span>
+              </div>
+            )}
+
+            {Number(order.flash_discount_amount) > 0 && (
+              <div className="flex justify-between text-red-600">
+                <span>Flash Sale Discount</span>
+                <span>-৳{order.flash_discount_amount}</span>
+              </div>
+            )}
+
+            <div className="border-t pt-2 mt-2 flex justify-between text-lg font-semibold text-gray-800">
+              <span>Total</span>
+              <span className="text-amber-600 font-bold">
+                ৳{order.total_amount}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Address */}
+        {/* Shipping Address */}
         {order.orderAddress && (
-          <div className="mt-6 p-4 border rounded-md bg-gray-50">
-            <h3 className="font-semibold text-gray-800 mb-2">
-              Shipping Address
+          <div className="p-5 rounded-xl bg-gradient-to-br from-white to-gray-50 border border-gray-200 shadow-sm">
+            <h3 className="font-semibold text-gray-800 mb-3 text-lg border-b pb-2">
+              Shipping Information
             </h3>
-            <div className="text-gray-700 space-y-1">
+            <div className="text-gray-700 space-y-1 text-sm">
               <p>
-                <span className="font-medium">Name:</span>{" "}
+                <span className="font-medium text-gray-800">Name:</span>{" "}
                 {order.orderAddress.name}
               </p>
               <p>
-                <span className="font-medium">Phone:</span>{" "}
+                <span className="font-medium text-gray-800">Phone:</span>{" "}
                 {order.orderAddress.phone_number}
               </p>
               <p>
-                <span className="font-medium">Address:</span>{" "}
+                <span className="font-medium text-gray-800">Address:</span>{" "}
                 {order.orderAddress.address}
               </p>
               <p>
-                <span className="font-medium">Zone:</span>{" "}
+                <span className="font-medium text-gray-800">Zone:</span>{" "}
                 {order.orderAddress.zone}
               </p>
               {order.orderAddress.district_name && (
                 <p>
-                  <span className="font-medium">District:</span>{" "}
+                  <span className="font-medium text-gray-800">District:</span>{" "}
                   {order.orderAddress.district_name}
                 </p>
               )}

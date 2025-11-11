@@ -26,7 +26,7 @@ interface VariantAPI {
   sku: string;
   buying_price?: string | null;
   sell_price?: string;
-  discount_price: string;
+  discount_price_cart: string;
   discount_amount?: string | null;
   stock: number;
   weight: string;
@@ -73,7 +73,7 @@ export default function Cart() {
       id: item.variantId,
       product_id: item.productId,
       sku: "",
-      discount_price: String(item.price || 0),
+      discount_price_cart: String(item.price || 0),
       sell_price: "0",
       stock: 1,
       weight: "0",
@@ -166,7 +166,7 @@ export default function Cart() {
   const subtotal = cartItems
     .filter((item) => selectedItems.includes(item.id) && !item.isDisabled)
     .reduce(
-      (acc, item) => acc + Number(item.discount_price) * item.quantity,
+      (acc, item) => acc + Number(item.discount_price_cart) * item.quantity,
       0
     );
 
@@ -274,7 +274,7 @@ export default function Cart() {
                         </p>
 
                         <p className="text-orange-600 text-xl font-bold">
-                          ৳ {Number(item.discount_price)}
+                          ৳ {Number(item.discount_price_cart)}
                         </p>
 
                         {item.stock === 0 && !item.isLoadingApi ? (
@@ -356,7 +356,7 @@ export default function Cart() {
                   productId: item.product_id,
                   name: item.name || item.skuLocal || "Unknown Product",
                   quantity: item.quantity,
-                  discount_price: Number(item.discount_price),
+                  discount_price: Number(item.discount_price_cart),
                   flash_sale: item.flash_sale || undefined,
                 }));
 
