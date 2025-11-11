@@ -27,16 +27,12 @@ export default function CheckoutPage() {
     setCheckoutTotals,
     districts,
     districtLoading,
-    variantLoading ,
+    variantLoading,
   } = useCheckout();
 
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">(
-    "cod"
-  );
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">("cod");
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">(
-    "new"
-  );
+  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">("new");
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressForm, setAddressForm] = useState({
     name: "",
@@ -87,7 +83,7 @@ export default function CheckoutPage() {
     fetchAddresses();
   }, []);
 
-  // 🟩 Auto-fill address when selected
+  // 🟩 Auto-fill when address selected
   useEffect(() => {
     if (selectedAddressId === "new") {
       setAddressForm({
@@ -112,10 +108,7 @@ export default function CheckoutPage() {
   }, [selectedAddressId, savedAddresses]);
 
   // 🟩 Recalculate checkout totals
-  const recalculateCheckout = async (
-    coupon = couponCode,
-    districtName = addressForm.district
-  ) => {
+  const recalculateCheckout = async (coupon = couponCode, districtName = addressForm.district) => {
     setCouponMessage("");
     if (!districtName) return;
 
@@ -124,12 +117,11 @@ export default function CheckoutPage() {
     );
     if (!district) return;
 
-    // 🟩 Each item sends its own flash_sale slug
     const product_list = checkoutItems.map((i) => ({
       product_id: String(i.product_id),
       variant_id: String(i.id),
       quantity: String(i.quantity),
-      flash_sale: i.flash_sale ?? null, // ✅ individual flash sale
+      flash_sale: i.flash_sale ?? null,
     }));
 
     try {
@@ -181,8 +173,7 @@ export default function CheckoutPage() {
   // 🟩 Apply coupon manually
   const applyCoupon = async () => {
     if (!couponCode) return setCouponMessage("Enter a coupon code first.");
-    if (!addressForm.district)
-      return toast.error("Select your district first.");
+    if (!addressForm.district) return toast.error("Select your district first.");
     setCouponLoading(true);
     const promise = recalculateCheckout(couponCode, addressForm.district);
     toast.promise(promise, {
@@ -202,7 +193,6 @@ export default function CheckoutPage() {
     );
     if (!district) return toast.error("Invalid district selected");
 
-    // 🟩 Each product carries its own flash_sale
     const product_list = checkoutItems.map((i) => ({
       product_id: String(i.product_id),
       variant_id: String(i.id),
@@ -264,40 +254,74 @@ export default function CheckoutPage() {
             </Link>
           </div>
 
-          {/* Address selector */}
-          <select
-            value={selectedAddressId}
-            onChange={(e) =>
-              setSelectedAddressId(
-                e.target.value === "new" ? "new" : Number(e.target.value)
-              )
-            }
-            className="border p-3 rounded w-full text-sm"
-            disabled={addressLoading}
-          >
-            {addressLoading ? (
-              <option>Loading addresses...</option>
-            ) : (
-              <>
-                <option value="new">Enter New Address</option>
-                {savedAddresses.map((addr) => (
-                  <option key={addr.id} value={addr.id}>
-                    {addr.name}, {addr.zone}, {addr.district}
-                  </option>
-                ))}
-              </>
-            )}
-          </select>
+          {/* 🟩 Saved Addresses (Card layout) */}
+          <div>
+            <h3 className="text-sm font-semibold mb-3">Select a Shipping Address</h3>
 
-          {/* Forms & Sections */}
-          <AddressForm
-            addressForm={addressForm}
-            setAddressForm={setAddressForm}
-            addressErrors={addressErrors}
-            setAddressErrors={setAddressErrors}
-            districts={districts}
-            districtLoading={districtLoading}
-          />
+            {addressLoading ? (
+              <div className="text-gray-500 text-sm">Loading addresses...</div>
+            ) : savedAddresses.length > 0 ? (
+              <div className="grid sm:grid-cols-2 gap-3">
+                {savedAddresses.map((addr) => (
+                  <div
+                    key={addr.id}
+                    onClick={() => setSelectedAddressId(addr.id)}
+                    className={`cursor-pointer border rounded-lg p-4 transition-all duration-200 ${
+                      selectedAddressId === addr.id
+                        ? "border-amber-500 bg-amber-50 shadow-sm"
+                        : "border-gray-200 hover:border-amber-400 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-gray-800">{addr.name}</p>
+                        <p className="text-sm text-gray-600">{addr.phone}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {addr.zone}, {addr.district}
+                        </p>
+                        <p className="text-xs text-gray-500">{addr.address}</p>
+                      </div>
+                      {selectedAddressId === addr.id && (
+                        <span className="text-xs px-2 py-1 bg-amber-500 text-white rounded-full">
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* ➕ Add New Address */}
+                <button
+                  onClick={() => setSelectedAddressId("new")}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center text-sm font-medium transition-all duration-200 ${
+                    selectedAddressId === "new"
+                      ? "border-amber-500 bg-amber-50 text-amber-700"
+                      : "border-gray-300 text-gray-600 hover:border-amber-400 hover:text-amber-600"
+                  }`}
+                >
+                  + Add New Address
+                </button>
+              </div>
+            ) : (
+              <div className="text-gray-500 text-sm">
+                No saved addresses found. Add a new address below 👇
+              </div>
+            )}
+          </div>
+
+          {/* Address Form */}
+          {selectedAddressId === "new" && (
+            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <AddressForm
+                addressForm={addressForm}
+                setAddressForm={setAddressForm}
+                addressErrors={addressErrors}
+                setAddressErrors={setAddressErrors}
+                districts={districts}
+                districtLoading={districtLoading}
+              />
+            </div>
+          )}
 
           <CouponSection
             couponCode={couponCode}
@@ -322,7 +346,7 @@ export default function CheckoutPage() {
             placeOrder={placeOrder}
             paymentLabel={paymentShortLabels[paymentMethod]}
             orderLoading={orderLoading}
-            variantLoading ={variantLoading}
+            variantLoading={variantLoading}
           />
         </div>
       </div>
