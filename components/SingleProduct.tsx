@@ -542,6 +542,7 @@ export default function SingleProduct({ product }: Props) {
                       name: product.name,
                       quantity: quantity,
                       discount_price: Number(currentVariant.discount_price),
+                      flash_sale: product.flash_sale_slug ?? "",
                     });
                     router.push("/checkout");
                   }}
