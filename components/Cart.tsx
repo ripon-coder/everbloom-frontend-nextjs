@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaTrash } from "react-icons/fa";
+import toast from "react-hot-toast";
 import { getCart, removeFromCart } from "@/lib/cart";
 import { setCheckoutItems } from "@/lib/checkout";
 import Lottie from "lottie-react";
@@ -360,11 +361,14 @@ export default function Cart() {
 
           <button
             disabled={
-              selectedItems.length === 0 ||
               cartItems.some((item) => item.isLoadingApi) ||
               hasStockExceeded
             }
             onClick={() => {
+              if (selectedItems.length === 0) {
+                toast.error("Please select a product first!");
+                return;
+              }
               const checkoutData = cartItems
                 .filter(
                   (item) => selectedItems.includes(item.id) && !item.isDisabled
@@ -389,7 +393,7 @@ export default function Cart() {
                 : ""
             }`}
           >
-              Proceed to Checkout
+            Proceed to Checkout
           </button>
         </div>
       </div>
