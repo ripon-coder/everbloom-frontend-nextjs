@@ -3,6 +3,7 @@ import ProductGrid from "@/components/Product";
 import Categories from "@/components/Categories";
 import FlashSale from "@/components/FlashSale";
 import { FlashSaleLoading, CategoriesLoading, ProductLoading } from "@/components/LoadingStates";
+import JustForYouProduct from "@/components/JustForYouProduct";
 
 // Server-side data fetching function
 async function getHomeData() {
@@ -87,9 +88,7 @@ export default async function Home() {
       </Suspense>
 
       {/* Products Section with Suspense */}
-      <Suspense fallback={<ProductLoading />}>
-        <ProductGrid />
-      </Suspense>
+      <JustForYouProduct />
     </>
   );
 }
