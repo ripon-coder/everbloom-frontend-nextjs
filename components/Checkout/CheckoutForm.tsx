@@ -9,6 +9,8 @@ import CouponSection from "./CouponSection";
 import PaymentMethod from "./PaymentMethod";
 import OrderSummary from "./OrderSummary";
 import { removeFromCheckout } from "@/lib/checkout";
+import TruckDeliveryLoopCycle from "@/app/animations/truck-delivery-loop-cycle.json";
+import Lottie from "lottie-react";
 
 interface Address {
   id: number;
@@ -30,9 +32,13 @@ export default function CheckoutPage() {
     variantLoading,
   } = useCheckout();
 
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">("cod");
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "card">(
+    "cod"
+  );
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">("new");
+  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">(
+    "new"
+  );
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressForm, setAddressForm] = useState({
     name: "",
@@ -108,7 +114,10 @@ export default function CheckoutPage() {
   }, [selectedAddressId, savedAddresses]);
 
   // 🟩 Recalculate checkout totals
-  const recalculateCheckout = async (coupon = couponCode, districtName = addressForm.district) => {
+  const recalculateCheckout = async (
+    coupon = couponCode,
+    districtName = addressForm.district
+  ) => {
     setCouponMessage("");
     if (!districtName) return;
 
@@ -173,7 +182,8 @@ export default function CheckoutPage() {
   // 🟩 Apply coupon manually
   const applyCoupon = async () => {
     if (!couponCode) return setCouponMessage("Enter a coupon code first.");
-    if (!addressForm.district) return toast.error("Select your district first.");
+    if (!addressForm.district)
+      return toast.error("Select your district first.");
     setCouponLoading(true);
     const promise = recalculateCheckout(couponCode, addressForm.district);
     toast.promise(promise, {
@@ -256,10 +266,27 @@ export default function CheckoutPage() {
 
           {/* 🟩 Saved Addresses (Card layout) */}
           <div>
-            <h3 className="text-sm font-semibold mb-3">Select a Shipping Address</h3>
+            <h3 className="text-sm font-semibold mb-3">
+              Select a Shipping Address
+            </h3>
 
             {addressLoading ? (
-              <div className="text-gray-500 text-sm">Loading addresses...</div>
+              <div className="flex flex-col items-center justify-center text-center py-0">
+                {/* 🛻 Lottie Animation */}
+                <div className="w-28 h-20">
+                  <Lottie
+                    animationData={TruckDeliveryLoopCycle}
+                    loop
+                    autoplay
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                </div>
+
+                {/* Text below animation */}
+                <p className="text-gray-500 text-sm mt-2">
+                  Loading addresses...
+                </p>
+              </div>
             ) : savedAddresses.length > 0 ? (
               <div className="grid sm:grid-cols-2 gap-3">
                 {savedAddresses.map((addr) => (
@@ -304,7 +331,10 @@ export default function CheckoutPage() {
               </div>
             ) : (
               <div className="text-gray-500 text-sm">
-                No saved addresses found. Add a new address from <Link className='text-amber-500' href='/address-book'>Address Book</Link>
+                No saved addresses found. Add a new address from{" "}
+                <Link className="text-amber-500" href="/address-book">
+                  Address Book
+                </Link>
               </div>
             )}
           </div>

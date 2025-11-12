@@ -1,6 +1,10 @@
+// components/Checkout/OrderSummary.tsx
 "use client";
 
 import { CheckoutVariant } from "@/hooks/useCheckout";
+import Lottie from "lottie-react";
+import CalculateIcon from "@/app/animations/calculate-hover-calculate.json";
+
 
 interface Props {
   checkoutItems: CheckoutVariant[];
@@ -9,7 +13,7 @@ interface Props {
   placeOrder: () => void;
   paymentLabel: string;
   orderLoading: boolean;
-  variantLoading: boolean; // ✅ added to use spinner
+  variantLoading: boolean;
 }
 
 export default function OrderSummary({
@@ -25,15 +29,27 @@ export default function OrderSummary({
 
   return (
     <div className="relative bg-white p-6 rounded-xl shadow-md overflow-hidden">
-      {/* 🌀 Spinner Overlay */}
       {variantLoading && (
         <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
-          <div className="w-10 h-10 border-4 border-orange-400 border-t-transparent rounded-full animate-spin mb-2"></div>
-          <span className="text-gray-600 text-sm font-medium">Loading summary...</span>
+          {/* Lottie Animation */}
+          <div className="w-20 h-20">
+            <Lottie
+              animationData={CalculateIcon}
+              loop
+              autoplay
+              style={{ width: "100%", height: "100%" }}
+            />
+          </div>
+
+          <span className="text-gray-600 text-sm font-medium mt-2">
+            Calculating summary...
+          </span>
         </div>
       )}
 
-      <h3 className="text-lg font-semibold mb-5 border-b pb-2">Order Summary</h3>
+      <h3 className="text-lg font-semibold mb-5 border-b pb-2">
+        Order Summary
+      </h3>
 
       {/* 🟩 Product list */}
       <div className="space-y-4 text-sm">
@@ -49,7 +65,9 @@ export default function OrderSummary({
               {/* Product Info */}
               <div className="flex flex-col">
                 <span className="font-medium text-gray-800">{item.name}</span>
-                <span className="text-gray-500 text-xs">{item.quantity} pcs</span>
+                <span className="text-gray-500 text-xs">
+                  {item.quantity} pcs
+                </span>
               </div>
 
               {/* Price Info */}
@@ -88,7 +106,9 @@ export default function OrderSummary({
         {hasFlash && (
           <div className="flex justify-between text-sm text-red-600 bg-red-50 px-2 py-1 rounded-md">
             <span className="font-medium">Flash Sale Discount</span>
-            <span>− ৳ {Number(checkoutTotals.flash_discount).toLocaleString()}</span>
+            <span>
+              − ৳ {Number(checkoutTotals.flash_discount).toLocaleString()}
+            </span>
           </div>
         )}
 
@@ -96,7 +116,9 @@ export default function OrderSummary({
         {Number(checkoutTotals.coupon_discount) > 0 && (
           <div className="flex justify-between text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
             <span className="font-medium">Coupon Discount</span>
-            <span>− ৳ {Number(checkoutTotals.coupon_discount).toLocaleString()}</span>
+            <span>
+              − ৳ {Number(checkoutTotals.coupon_discount).toLocaleString()}
+            </span>
           </div>
         )}
 

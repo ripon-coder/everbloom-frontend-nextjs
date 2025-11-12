@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { FaTrash } from "react-icons/fa";
 import { getCart, removeFromCart } from "@/lib/cart";
 import { setCheckoutItems } from "@/lib/checkout";
+import Lottie from "lottie-react";
+import CalculateIcon from "@/app/animations/calculate-hover-calculate.json";
 
 interface LocalCartItem {
   productId: number;
@@ -171,8 +173,7 @@ export default function Cart() {
     );
 
   const hasStockExceeded = cartItems.some(
-    (item) =>
-      selectedItems.includes(item.id) && item.quantity > item.stock
+    (item) => selectedItems.includes(item.id) && item.quantity > item.stock
   );
 
   const total = subtotal;
@@ -327,7 +328,24 @@ export default function Cart() {
         </div>
 
         {/* Cart Summary */}
-        <div className="bg-white p-6 rounded-xl shadow-sm h-fit">
+        <div className="bg-white p-6 rounded-xl shadow-sm h-fit relative">
+          {/* 🧮 Lottie Overlay Loader */}
+          {cartItems.some((item) => item.isLoadingApi) && (
+            <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10 backdrop-blur-sm rounded-xl">
+              <div className="w-20 h-20">
+                <Lottie
+                  animationData={CalculateIcon}
+                  loop
+                  autoplay
+                  style={{ width: "100%", height: "100%" }}
+                />
+              </div>
+              <span className="text-gray-600 text-sm font-medium mt-2">
+                Calculating summary...
+              </span>
+            </div>
+          )}
+
           <h2 className="text-xl font-semibold mb-4 text-gray-800">
             Order Summary
           </h2>
@@ -371,9 +389,7 @@ export default function Cart() {
                 : ""
             }`}
           >
-            {cartItems.some((item) => item.isLoadingApi)
-              ? "Loading products..."
-              : "Proceed to Checkout"}
+              Proceed to Checkout
           </button>
         </div>
       </div>

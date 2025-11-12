@@ -8,6 +8,8 @@ import { addToCart } from "@/lib/cart";
 import { toast } from "react-hot-toast";
 import { clearCheckout, addToCheckout } from "@/lib/checkout";
 import WishlistButton from "@/components/WishlistButton";
+import { trackCategoryView } from "@/lib/JustForYouTracker";
+
 
 // Types
 interface Attribute {
@@ -32,6 +34,7 @@ interface Variant {
 
 interface Product {
   id: number;
+  category_id: number;
   name: string;
   short_description?: string;
   description?: string;
@@ -51,6 +54,14 @@ interface Props {
 }
 
 export default function SingleProduct({ product }: Props) {
+
+  useEffect(() => {
+    if (product?.category_id) {
+      trackCategoryView(product.category_id);
+    }
+  }, [product]);
+
+
   const router = useRouter();
   const firstVariant = product?.variants?.[0] || null;
 
