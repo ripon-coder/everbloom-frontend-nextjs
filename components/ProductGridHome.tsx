@@ -39,13 +39,13 @@ export default function ProductGrid({
       : `/product/${productSlug}`;
 
   return (
-    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+    <div className="grid gap-3 grid-cols-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
       {isLoading
         ? Array.from({ length: 7 }).map((_, index) => (
             <ProductSkeleton key={index} />
           ))
         : products.map((p) => (
-            <Link key={p.id} href={getProductLink(p.slug)}>
+            <a key={p.id} href={getProductLink(p.slug)}>
               <div className="bg-white border rounded-md overflow-hidden hover:shadow-md transition-transform hover:-translate-y-1 cursor-pointer">
                 <div className="relative w-full aspect-[1/1]">
                   <Image
@@ -65,7 +65,7 @@ export default function ProductGrid({
                   </h2>
                 </div>
               </div>
-            </Link>
+            </a>
           ))}
     </div>
   );

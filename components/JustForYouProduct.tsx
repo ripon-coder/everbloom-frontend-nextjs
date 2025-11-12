@@ -67,7 +67,7 @@ export default function JustForYouProduct() {
   if (initialLoading) {
     return (
       <section className="px-6 py-6">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-3">Just For You</h2>
+        <h2 className="text-xl font-semibold mb-3">Just For You</h2>
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
           {Array.from({ length: 7 }).map((_, i) => (
             <ProductSkeleton key={i} />
