@@ -304,7 +304,7 @@ export default function CheckoutPage() {
               </div>
             ) : (
               <div className="text-gray-500 text-sm">
-                No saved addresses found. Add a new address below 👇
+                No saved addresses found. Add a new address from <Link className='text-amber-500' href='/address-book'>Address Book</Link>
               </div>
             )}
           </div>
