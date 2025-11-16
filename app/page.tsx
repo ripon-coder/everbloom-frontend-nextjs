@@ -70,6 +70,7 @@ export async function generateMetadata() {
     },
   };
 }
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
   // Server-side data fetching
@@ -86,6 +87,7 @@ export default async function Home() {
       <Suspense fallback={<CategoriesLoading />}>
         <Categories />
       </Suspense>
+
 
       {/* Products Section with Suspense */}
       <JustForYouProduct />

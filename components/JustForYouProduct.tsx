@@ -17,7 +17,6 @@ export default function JustForYouProduct() {
     const categoryIds = getTrackedCategories();
     if (categoryIds.length === 0) {
       setInitialLoading(false);
-      return;
     }
 
     if (pageNumber === 1) setInitialLoading(true);

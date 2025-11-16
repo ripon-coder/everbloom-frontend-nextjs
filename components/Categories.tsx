@@ -1,12 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import customImageLoader from "@/lib/image-loader";
 
 // Server-side data fetching function
 async function getCategories() {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_ROOT_URL}/api/parent-category`
+      `${process.env.NEXT_PUBLIC_ROOT_URL}/api/parent-category`,
+      { cache: "no-store" } // 👈 FIX: always fetch fresh
     );
 
     if (!res.ok) {
@@ -42,7 +42,6 @@ export default async function Categories() {
           {categories.map((c: any) => (
             <Link key={c.id} href={`/shop?category=${c.slug}`}>
               <div
-                key={c.id}
                 className="bg-white shadow-sm hover:shadow-md hover:-translate-y-1 
                          transition duration-300 cursor-pointer rounded-md overflow-hidden"
               >
